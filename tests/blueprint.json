@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "step": "defineWpConfigConsts",
+      "consts": {
+        "WP_DEBUG": true,
+        "WP_DEBUG_DISPLAY": true,
+        "WP_DISABLE_FATAL_ERROR_HANDLER": true
+      }
+    },
+    {
+      "step": "enableMultisite"
+    },
+    {
+      "step": "activatePlugin",
+      "pluginPath": "/wordpress/wp-content/plugins/petit-popular"
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require '/wordpress/wp-content/plugins/petit-popular/tests/wordpress.php';"
+    }
+  ],
+  "preferredVersions": {
+    "wp": "https://github.com/WordPress/WordPress/archive/refs/tags/6.8.zip",
+    "php": "8.0"
+  }
+}
