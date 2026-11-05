@@ -1,13 +1,13 @@
-> **Descarrega el plugin instal·lable:** [petit-popular-0.1.3.zip](dist/petit-popular-0.1.3.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
+> **Descarrega el plugin instal·lable:** [petit-popular-0.2.0.zip](dist/petit-popular-0.2.0.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
 
-# Petit Popular · 0.1.3 (prototip)
+# Petit Popular · 0.2.0 (prototip)
 
 Plugin per a WordPress 6.4+ i PHP 8.0+. Compatible amb activació per web o per xarxa multisite. No modifica WordPress Popular Posts ni importa les seves dades. No requereix cap servei extern.
 
 ## Instal·lació de prova
 
 1. Fes servir primer una còpia de proves del multisite, amb còpia de seguretat.
-2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.1.3.zip`.
+2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.2.0.zip`.
 3. Activa'l a la xarxa o a la web que vulguis provar. Les taules es creen en la primera petició de cada web, incloent les webs creades després de l'activació.
 4. Entra a **Configuració → Petit Popular** de cadascuna de les webs. Defineix els dos factors i l'estil base.
 5. Genera un shortcode amb els selectors i enganxa'l en un bloc Shortcode. Visita una notícia com a lector no editor per començar a recollir dades.
@@ -97,7 +97,7 @@ El ZIP instal·lable exclou els tests.
 
 ## Validació d'aquesta versió
 
-Comprovacions executades: 22 de dates i factors, 6 de seguiment al navegador simulat i 41 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
+Comprovacions executades: 22 de dates i factors, 6 de seguiment al navegador simulat i 51 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
 
 `preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat dels punts amb dades fictícies.
 
@@ -122,3 +122,18 @@ El manual especifica Nunito (pàgina 6). Pots seleccionar `font="nunito"` si el 
 ## Targetes orientades al clic (0.1.3)
 
 Les notícies mostren imatge, titular enllaçat i dia de publicació. Els esdeveniments mostren imatge, títol enllaçat i dia d’inici de celebració. S’han retirat categories, resums, nom del mitjà, hores i llocs. La imatge també enllaça al contingut. Es mantenen la posició al rànquing i els punts opcionals (ocults per defecte). Els shortcodes antics amb `show_excerpt="yes"` continuen funcionant però ja no mostren extractes.
+
+## Panell visual amb previsualització en directe (0.2.0)
+
+A **Configuració → Petit Popular**, tria el contingut i les dates, selecciona un disseny amb les miniatures i ajusta els colors i la tipografia. La vista de la dreta s’actualitza automàticament. Pots provar l’amplada completa o una barra lateral de 340 px.
+
+- **Mostra d’estil:** textos, imatges i xifres fictícies, identificats com a demostració. Permet veure el disseny sense visites acumulades i sense tenir Events Calendar activat. Els filtres temporals no alteren aquesta mostra.
+- **Rànquing real:** continguts i visites de la web segons els filtres. Si no hi ha resultats, es mostra el missatge corresponent. No afegeix visites.
+- **Copia el codi:** copia el shortcode actual per inserir-lo en un bloc Shortcode. Si el navegador no permet accedir al porta-retalls, selecciona el codi per copiar-lo manualment.
+- Els factors i la identitat de la web són a «Configuració de la web i multiplicadors». Cal desar aquests ajustos abans de previsualitzar-los.
+
+La previsualització només és accessible a administradors i valida un nonce de sessió. El marc de previsualització no executa scripts. El tema de producció pot modificar la tipografia i els espais respecte a la previsualització. El procés d’inserció encara utilitza shortcodes; aquesta versió no inclou un bloc Gutenberg propi.
+
+Per actualitzar, puja el ZIP 0.2.0 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
+
+Validació afegida: 17 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 51 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.

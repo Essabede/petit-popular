@@ -36,3 +36,5 @@
 .petit-popular.pp-vertical .pp-rank{left:8px;bottom:8px;width:1.9em;height:1.9em;font-size:.85rem}
 .petit-popular.pp-vertical.pp-image-top .pp-card{display:block}
 .petit-popular.pp-vertical.pp-image-top .pp-image{aspect-ratio:16/9}
+.pp-demo-art{position:absolute;inset:0;display:block;background:linear-gradient(145deg,transparent 45%,#ffffff55 46%,#ffffff55 65%,transparent 66%),linear-gradient(30deg,#f5ba4088,var(--pp-accent));opacity:.85}
+.pp-demo-art:after{content:"";position:absolute;width:25%;aspect-ratio:1;border-radius:50%;background:#ffffff77;right:12%;top:12%}

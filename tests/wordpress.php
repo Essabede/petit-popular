@@ -106,11 +106,37 @@ if (is_multisite()) {
     restore_current_blog();
     pp_check(Petit_Popular::settings()['post_factor'] === 4, 'Original site settings preserved');
 } else { echo "NOTE: multisite tests not executed\n"; }
+function pp_preview($args, $nonce, $mode = 'demo') {
+    $_POST = ['args' => $args, 'nonce' => $nonce, 'mode' => $mode];
+    $_REQUEST = $_POST;
+    ob_start();
+    try { Petit_Popular::preview(); } catch (RuntimeException $e) {
+        if ($e->getMessage() !== 'ajax complete') { throw $e; }
+    }
+    return json_decode(ob_get_clean(), true);
+}
+wp_set_current_user(0);
+pp_check(pp_preview([], 'invalid')['success'] === false, 'Anonymous preview denied');
 wp_set_current_user(1);
+$preview_nonce = wp_create_nonce('petit_popular_preview');
+pp_check(pp_preview([], 'invalid')['success'] === false, 'Preview nonce required');
+$sample = pp_preview(['layout' => 'vertical', 'brand' => 'terrassa', 'limit' => '3'], $preview_nonce);
+pp_check($sample['success'] && $sample['data']['demo'], 'Style sample explicitly marked as demo');
+pp_check(substr_count($sample['data']['html'], '<li class="pp-item">') === 3, 'Preview item count');
+pp_check(strpos($sample['data']['html'], 'pp-vertical') !== false && strpos($sample['data']['html'], '#fc634f') !== false, 'Preview applies layout and brand');
+pp_check(pp_preview(['type' => 'events'], $preview_nonce)['success'], 'Event style demo works without TEC or traffic');
+$real = pp_preview(['show_count' => 'yes'], $preview_nonce, 'ranking');
+pp_check($real['success'] && !$real['data']['demo'] && strpos($real['data']['html'], 'Notícia A') !== false, 'Real preview uses site ranking');
+$unchanged = Petit_Popular::ranked(Petit_Popular::defaults());
+pp_check((int) $unchanged[0]->real_views === 12, 'Preview never adds page views');
+Petit_Popular::admin_assets('settings_page_petit-popular');
+pp_check(wp_style_is('petit-popular-admin', 'enqueued'), 'Admin stylesheet registered before rendering');
 ob_start();
 Petit_Popular::admin();
 $admin = ob_get_clean();
+file_put_contents(__DIR__ . '/admin-fixture.html', $admin);
 pp_check(strpos($admin, 'Factor de notícies') !== false && strpos($admin, 'pp-builder') !== false, 'Admin settings and builder render');
+pp_check(strpos($admin, 'pp-preview-frame') !== false && strpos($admin, 'pp-copy') !== false, 'Visual preview panel and copy action render');
 file_put_contents(__DIR__ . '/last-run.json', json_encode([
     'checks' => $checks, 'wordpress' => get_bloginfo('version'), 'php' => PHP_VERSION,
     'multisite' => is_multisite(), 'result' => 'PASS', 'at' => gmdate('c'),

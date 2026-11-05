@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Petit Popular
  * Description: Rànquings de notícies i d'Events Calendar, amb períodes, factors i dissenys per web.
- * Version: 0.1.3
+ * Version: 0.2.0
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Petit
@@ -14,14 +14,16 @@ if (!defined('ABSPATH')) { exit; }
 require_once __DIR__ . '/includes.php';
 
 final class Petit_Popular {
-    const VERSION = '0.1.3';
+    const VERSION = '0.2.0';
     const OPTION = 'petit_popular_settings';
 
     public static function boot() {
         add_action('init', [__CLASS__, 'ensure_schema']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'admin_assets']);
         add_action('admin_menu', [__CLASS__, 'menu']);
         add_action('admin_init', [__CLASS__, 'register_settings']);
         add_action('wp_enqueue_scripts', [__CLASS__, 'assets']);
+        add_action('wp_ajax_petit_popular_preview', [__CLASS__, 'preview']);
         add_action('wp_ajax_petit_popular_view', [__CLASS__, 'track']);
         add_action('wp_ajax_nopriv_petit_popular_view', [__CLASS__, 'track']);
         add_shortcode('petit_popular', [__CLASS__, 'shortcode']);
@@ -199,6 +201,10 @@ final class Petit_Popular {
             return current_user_can('manage_options') ? '<p class="pp-notice">' . esc_html($e->getMessage()) . '</p>' : '';
         }
         if (!$rows) { return '<p class="pp-empty">Encara no hi ha continguts amb visites per a aquest període.</p>'; }
+        return self::render($a, $rows);
+    }
+
+    private static function render($a, $rows) {
         $settings = self::settings();
         $factor = $settings[$a['type'] === 'events' ? 'event_factor' : 'post_factor'];
         $layout = in_array($a['layout'], ['cards', 'list', 'hero', 'vertical'], true) ? $a['layout'] : 'cards';
@@ -219,19 +225,22 @@ final class Petit_Popular {
             <?php foreach ($rows as $index => $row) :
                 $id = (int) $row->ID;
                 $is_event = $a['type'] === 'events';
+                $demo = isset($row->demo_title);
+                $url = $demo ? '#' : get_permalink($id);
+                $title = $demo ? $row->demo_title : get_the_title($id);
                 ?>
                 <li class="pp-item"><article class="pp-card">
-                    <a class="pp-image" href="<?php echo esc_url(get_permalink($id)); ?>" tabindex="-1" aria-hidden="true">
-                        <?php echo get_the_post_thumbnail($id, 'medium_large', ['loading' => 'lazy', 'alt' => '']); ?>
+                    <a class="pp-image" href="<?php echo esc_url($url); ?>" tabindex="-1" aria-hidden="true">
+                        <?php if ($demo) { echo '<span class="pp-demo-art" aria-hidden="true"></span>'; } else { echo get_the_post_thumbnail($id, 'medium_large', ['loading' => 'lazy', 'alt' => '']); } ?>
                         <span class="pp-rank"><?php echo (int) $index + 1; ?></span>
                     </a>
                     <div class="pp-body">
-                        <h3 class="pp-title"><a href="<?php echo esc_url(get_permalink($id)); ?>"><?php echo esc_html(get_the_title($id)); ?></a></h3>
+                        <h3 class="pp-title"><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($title); ?></a></h3>
                         <?php
-                        $date = $is_event && function_exists('tribe_get_start_date')
-                            ? tribe_get_start_date($id, false, 'd/m/Y') : get_the_date('d/m/Y', $id);
-                        $machine_date = $is_event && function_exists('tribe_get_start_date')
-                            ? tribe_get_start_date($id, false, 'Y-m-d') : get_the_date('Y-m-d', $id);
+                        $date = $demo ? $row->demo_date->format('d/m/Y') : ($is_event && function_exists('tribe_get_start_date')
+                            ? tribe_get_start_date($id, false, 'd/m/Y') : get_the_date('d/m/Y', $id));
+                        $machine_date = $demo ? $row->demo_date->format('Y-m-d') : ($is_event && function_exists('tribe_get_start_date')
+                            ? tribe_get_start_date($id, false, 'Y-m-d') : get_the_date('Y-m-d', $id));
                         ?>
                         <p class="pp-meta"><time datetime="<?php echo esc_attr($machine_date); ?>"><?php echo esc_html($date); ?></time></p>
                         <?php if ($a['show_count'] === 'yes') : ?><span class="pp-score"><?php echo esc_html(number_format_i18n(Petit_Popular_Dates::score($row->real_views, $factor))); ?> punts de popularitat</span><?php endif; ?>
@@ -244,6 +253,34 @@ final class Petit_Popular {
         return ob_get_clean();
     }
 
+    public static function preview() {
+        if (!current_user_can('manage_options')) { wp_send_json_error(['message' => 'Accés restringit.'], 403); }
+        if (!check_ajax_referer('petit_popular_preview', 'nonce', false)) { wp_send_json_error(['message' => 'La sessió ha caducat. Recarrega la pàgina.'], 403); }
+        $input = isset($_POST['args']) && is_array($_POST['args']) ? wp_unslash($_POST['args']) : [];
+        $args = [];
+        foreach (self::defaults() as $key => $default) {
+            $args[$key] = isset($input[$key]) && is_scalar($input[$key]) ? sanitize_text_field((string) $input[$key]) : $default;
+        }
+        if (!in_array($args['type'], ['posts', 'events'], true)) { wp_send_json_error(['message' => 'Tipus de contingut no vàlid.'], 400); }
+        $demo = ($_POST['mode'] ?? '') !== 'ranking';
+        if ($demo) {
+            $titles = $args['type'] === 'events'
+                ? ['Un matí de contes i aventures', 'Música per compartir en família', 'Un taller per descobrir i crear']
+                : ['Una ciutat per descobrir en família', 'Petites històries que fan gran el barri', 'Noves propostes per gaudir del cap de setmana'];
+            $rows = [];
+            $limit = max(1, min(24, (int) $args['limit']));
+            for ($i = 0; $i < $limit; $i++) {
+                $rows[] = (object) ['ID' => 0, 'real_views' => 120 - $i * 3,
+                    'demo_title' => $titles[$i % count($titles)],
+                    'demo_date' => current_datetime()->modify(($args['type'] === 'events' ? '+' : '-') . $i . ' days')];
+            }
+            $html = self::render($args, $rows);
+        } else {
+            $html = self::shortcode($args);
+        }
+        wp_send_json_success(['html' => $html, 'demo' => $demo]);
+    }
+
     public static function admin() {
         if (!current_user_can('manage_options')) { return; }
         $s = self::settings();
@@ -251,6 +288,7 @@ final class Petit_Popular {
         <div class="wrap"><h1>Petit Popular</h1>
         <p>Configuració exclusiva de <strong><?php echo esc_html(get_bloginfo('name')); ?></strong>. Les visites i els factors no es comparteixen amb les altres webs del multisite.</p>
         <?php settings_errors(self::OPTION); ?>
+        <details class="pp-site-settings"><summary>Configuració de la web i multiplicadors</summary>
         <form action="options.php" method="post">
         <?php settings_fields('petit_popular'); ?>
         <table class="form-table" role="presentation">
@@ -259,22 +297,23 @@ final class Petit_Popular {
         <option value="<?php echo esc_attr($value); ?>" <?php selected($s['brand'], $value); ?>><?php echo esc_html($label); ?></option>
         <?php endforeach; ?></select><p class="description">Colors del manual corporatiu. Per definir un altre color, selecciona Personalitzat.</p></td></tr>
         <?php foreach (['post_factor' => 'Factor de notícies', 'event_factor' => 'Factor d’esdeveniments', 'radius' => 'Arrodoniment (px)', 'gap' => 'Espai entre elements (px)'] as $key => $label) : ?>
-            <tr><th scope="row"><label for="pp-<?php echo esc_attr($key); ?>"><?php echo esc_html($label); ?></label></th>
-            <td><input id="pp-<?php echo esc_attr($key); ?>" name="<?php echo esc_attr(self::OPTION . '[' . $key . ']'); ?>" type="number" min="<?php echo strpos($key, 'factor') !== false ? '0.01' : '0'; ?>" max="<?php echo strpos($key, 'factor') !== false ? '1000' : ($key === 'gap' ? '64' : '48'); ?>" step="<?php echo strpos($key, 'factor') !== false ? '0.01' : '1'; ?>" value="<?php echo esc_attr($s[$key]); ?>"></td></tr>
+            <tr><th scope="row"><label for="pp-site-<?php echo esc_attr($key); ?>"><?php echo esc_html($label); ?></label></th>
+            <td><input id="pp-site-<?php echo esc_attr($key); ?>" name="<?php echo esc_attr(self::OPTION . '[' . $key . ']'); ?>" type="number" min="<?php echo strpos($key, 'factor') !== false ? '0.01' : '0'; ?>" max="<?php echo strpos($key, 'factor') !== false ? '1000' : ($key === 'gap' ? '64' : '48'); ?>" step="<?php echo strpos($key, 'factor') !== false ? '0.01' : '1'; ?>" value="<?php echo esc_attr($s[$key]); ?>"></td></tr>
         <?php endforeach; ?>
-        <tr><th><label for="pp-accent">Color d’accent</label></th><td><input id="pp-accent" type="color" name="<?php echo esc_attr(self::OPTION); ?>[accent]" value="<?php echo esc_attr($s['accent']); ?>"></td></tr>
+        <tr><th><label for="pp-site-accent">Color d’accent</label></th><td><input id="pp-site-accent" type="color" name="<?php echo esc_attr(self::OPTION); ?>[accent]" value="<?php echo esc_attr($s['accent']); ?>"></td></tr>
         </table>
         <p>El factor s’aplica només a la sortida pública del plugin. L’ordre depèn de les visites reals. Els recomptes ajustats s’etiqueten com a punts de popularitat.</p>
-        <?php submit_button(); ?></form>
-        <hr><h2>Crea un rànquing</h2>
-        <p>Enganxa el resultat en un bloc «Shortcode», un widget o el contingut d’una pàgina. Cada rànquing té els seus propis filtres.</p>
-        <div id="pp-builder" style="max-width:850px">
+        <?php submit_button(); ?></form></details>
+        <h2>Crea el teu rànquing</h2>
+        <p>Tria el contingut, el període i el disseny. Veuràs el resultat a la dreta abans d’inserir-lo a la web.</p>
+        <div id="pp-builder" class="pp-workspace"><div class="pp-controls"><fieldset class="pp-control-group"><legend>1. Contingut i dates</legend>
         <?php self::select('type', 'Contingut', ['posts' => 'Notícies', 'events' => 'Esdeveniments']); ?>
         <?php self::select('period', 'Visites rebudes durant', ['7d' => 'Últims 7 dies', '30d' => 'Últims 30 dies', 'today' => 'Avui', 'week' => 'Aquesta setmana', 'month' => 'Aquest mes', 'days' => 'Últims X dies', 'custom' => 'Entre dues dates', 'all' => 'Tot l’històric']); ?>
         <?php self::input('days', 'X dies de visites', 'number', '7'); self::input('from', 'Visites des de', 'date'); self::input('to', 'Visites fins a', 'date'); ?>
         <?php self::select('event_period', 'Celebració dels esdeveniments', ['next' => 'Pròxims X dies', 'today' => 'Avui', 'weekend' => 'Aquest cap de setmana', 'month' => 'Aquest mes', 'custom' => 'Entre dues dates', 'all' => 'Sense filtre']); ?>
         <?php self::input('event_days', 'X dies d’agenda', 'number', '14'); self::input('event_from', 'Agenda des de', 'date'); self::input('event_to', 'Agenda fins a', 'date'); ?>
         <?php self::select('ongoing', 'Incloure esdeveniments en curs', ['yes' => 'Sí', 'no' => 'No']); ?>
+        </fieldset><fieldset class="pp-control-group"><legend>2. Disseny</legend>
         <?php self::select('layout', 'Disseny', ['cards' => 'Targetes', 'list' => 'Llista amb imatges', 'hero' => 'Primer destacat', 'vertical' => 'Rànquing vertical']); ?>
         <?php self::select('image_position', 'Imatge al rànquing vertical', ['side' => 'Al costat del text (compacte)', 'top' => 'Al damunt del text (targetes apilades)']); ?>
         <?php self::select('show_count', 'Mostrar punts', ['no' => 'No', 'yes' => 'Sí']); ?>
@@ -282,8 +321,15 @@ final class Petit_Popular {
         <?php self::select('font', 'Tipografia', ['theme' => 'La del tema', 'serif' => 'Editorial (Georgia)', 'sans' => 'Sense serifa (Arial)', 'nunito' => 'Nunito (si està instal·lada al tema)']); ?>
         <?php self::input('title_size', 'Mida dels titulars (14–48 px)', 'number', '20'); self::input('accent', 'Color propi (opcional, #hex)'); self::input('radius', 'Arrodoniment propi (opcional, px)', 'number'); self::input('gap', 'Espaiat propi (opcional, px)', 'number'); ?>
         <?php self::input('title', 'Títol del rànquing'); self::input('category', 'Slug de categoria (opcional)'); self::input('limit', 'Nombre d’elements (1–24)', 'number', '5'); self::input('columns', 'Columnes (1–4)', 'number', '3'); ?>
-        <p><label for="pp-code"><strong>Shortcode</strong></label><br><textarea readonly id="pp-code" rows="5" style="width:100%"></textarea></p>
-        </div>
+        </fieldset><div class="pp-insert"><h3>3. Insereix-lo a WordPress</h3><p>Copia el codi i enganxa’l en un bloc «Shortcode» de la pàgina o del widget.</p>
+        <label for="pp-code" class="screen-reader-text">Codi del rànquing</label><textarea readonly id="pp-code" rows="4"></textarea>
+        <button type="button" id="pp-copy" class="button button-primary">Copia el codi</button><span id="pp-copy-status" role="status"></span></div></div>
+        <div class="pp-preview-panel"><div class="pp-preview-toolbar"><h3>Previsualització</h3>
+        <label for="pp-preview-mode">Continguts</label><select id="pp-preview-mode"><option value="demo">Mostra d’estil</option><option value="ranking">Rànquing real</option></select>
+        <label for="pp-preview-width">Amplada</label><select id="pp-preview-width"><option value="100%">Completa</option><option value="340px">Barra lateral</option></select></div>
+        <p id="pp-preview-note">Mostra amb textos, imatges i xifres fictícies. Els filtres temporals s’apliquen al rànquing real.</p>
+        <p id="pp-preview-status" role="status" aria-live="polite"></p><iframe id="pp-preview-frame" title="Previsualització del rànquing" sandbox="allow-same-origin"></iframe>
+        <p class="description">El tema de la web pot modificar la tipografia i els espais. Desa els canvis dels multiplicadors abans de previsualitzar-los.</p></div></div>
         <h2>Visites reals · últims 7 dies</h2>
         <p>Aquesta informació només es mostra a administradors. El recompte comença en activar el plugin; no importa l’històric d’altres plugins.</p>
         <?php foreach (['posts' => 'Notícies', 'events' => 'Esdeveniments'] as $type => $label) : ?>
@@ -299,7 +345,16 @@ final class Petit_Popular {
         <p>Comptem càrregues de pàgina amb JavaScript, excloent editors i bots identificables. No són persones úniques ni una mètrica auditada. No desem IP ni identificadors de visitant. Una pàgina mantinguda en memòria cau més de 12 hores pot deixar de comptar fins que es renovi el nonce.</p>
         </div>
         <?php
+    }
+
+    public static function admin_assets($hook) {
+        if ($hook !== 'settings_page_petit-popular') { return; }
+        wp_enqueue_style('petit-popular-admin', plugins_url('assets/admin.css', __FILE__), [], self::VERSION);
         wp_enqueue_script('petit-popular-builder', plugins_url('assets/builder.js', __FILE__), [], self::VERSION, true);
+        wp_localize_script('petit-popular-builder', 'PetitPopularBuilder', [
+            'url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('petit_popular_preview'),
+            'styles' => plugins_url('assets/popular.css', __FILE__),
+        ]);
     }
 
     private static function select($key, $label, $options) {
