@@ -30,7 +30,7 @@ w.fetch = async (url, options) => {
       data = { ranking, saved: listing() };
     } else if (operation === 'load') data = saved.get(id);
     else if (operation === 'delete') { saved.delete(id); data = { saved: listing() }; }
-    else if (operation === 'import') data = { id: 0, name: '', args: { ...w.PetitPopularBuilder.defaults, layout: 'vertical', period: '30d', title: 'Importat' } };
+    else if (operation === 'import') data = { id: 0, name: '', args: { ...w.PetitPopularBuilder.defaults, layout: 'vertical', period: '30d', title: 'Importat', radius: '11', gap: '19', accent: '#abc', show_image: 'no' } };
     return { ok: true, json: async () => ({ success: true, data }) };
   }
   return { ok: !fail, json: async () => fail ? { success: false, data: { message: 'Connexió no disponible' } } : { success: true, data: { html: '<section class="petit-popular">Vista nova</section>' } } };
@@ -96,9 +96,24 @@ doc.getElementById('pp-import').click();
 await new Promise(resolve => setTimeout(resolve, 20));
 check(doc.getElementById('pp-layout').value === 'vertical' && doc.getElementById('pp-title').value === 'Importat', 'Legacy import repopulates visual builder');
 check(doc.getElementById('pp-ranking-name').value === '' && !doc.getElementById('pp-code').value.includes('id="300"'), 'Legacy import is a new unsaved configuration');
+check(doc.getElementById('pp-radius').value === '11' && doc.getElementById('pp-gap').value === '19', 'Legacy numeric appearance settings retained as custom choices');
+check(doc.getElementById('pp-color-mode').value === 'custom' && doc.getElementById('pp-accent-picker').value === '#aabbcc', 'Legacy short hex color restored in visual picker');
 change('pp-saved-select', '300');
 doc.getElementById('pp-delete').click();
 await new Promise(resolve => setTimeout(resolve, 20));
 check(saved.size === 0 && doc.getElementById('pp-saved-select').options.length === 1, 'Delete updates library');
+change('pp-show_image', 'no');
+check(doc.getElementById('pp-image_position').closest('p').hidden, 'Photo position hidden in no-photo mode');
+check(doc.getElementById('pp-code').value.includes('show_image="no"'), 'No-photo option included in shortcode');
+change('pp-color-mode', 'custom');
+change('pp-accent-picker', '#123456');
+check(doc.getElementById('pp-code').value.includes('accent="#123456"'), 'Visual picker sets shortcode color');
+change('pp-color-mode', 'brand');
+check(!doc.getElementById('pp-code').value.includes('accent='), 'Brand color mode clears custom override');
+check(doc.getElementById('pp-accent-picker').closest('p').hidden, 'Picker hidden while brand color used');
+change('pp-radius', '16');
+change('pp-gap', '24');
+change('pp-rank_size', '40');
+check(doc.getElementById('pp-code').value.includes('radius="16"') && doc.getElementById('pp-code').value.includes('gap="24"') && doc.getElementById('pp-code').value.includes('rank_size="40"'), 'Plain-language appearance choices produce expected settings');
 w.close();
 console.log(`PASS: ${checks} visual builder interaction checks`);

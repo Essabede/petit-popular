@@ -1,13 +1,13 @@
-> **Descarrega el plugin instal·lable:** [petit-popular-0.3.0.zip](dist/petit-popular-0.3.0.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
+> **Descarrega el plugin instal·lable:** [petit-popular-0.3.1.zip](dist/petit-popular-0.3.1.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
 
-# Petit Popular · 0.3.0 (prototip)
+# Petit Popular · 0.3.1 (prototip)
 
 Plugin per a WordPress 6.4+ i PHP 8.0+. Compatible amb activació per web o per xarxa multisite. No modifica WordPress Popular Posts ni importa les seves dades. No requereix cap servei extern.
 
 ## Instal·lació de prova
 
 1. Fes servir primer una còpia de proves del multisite, amb còpia de seguretat.
-2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.3.0.zip`.
+2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.3.1.zip`.
 3. Activa'l a la xarxa o a la web que vulguis provar. Les taules es creen en la primera petició de cada web, incloent les webs creades després de l'activació.
 4. Entra a **Configuració → Petit Popular** de cadascuna de les webs. Defineix els dos factors i l'estil base.
 5. Genera un shortcode amb els selectors i enganxa'l en un bloc Shortcode. Visita una notícia com a lector no editor per començar a recollir dades.
@@ -58,6 +58,8 @@ Dates de visites i de celebració independents:
 | `layout` | `cards`, `list`, `hero`, `vertical` |
 | `image_position` | `side` (imatge al costat) o `top` (imatge al damunt), per a `layout="vertical"` |
 | `columns` | 1–4; s'adapta a pantalles petites |
+| `show_image` | `yes` (amb foto, per defecte) o `no` (sense foto) |
+| `rank_size` | Mida dels números, 20–48 px; 32 px per defecte |
 | `show_count` | `yes` o `no`; ocult per defecte |
 | `title` | Títol del rànquing |
 | `font` | `theme`, `serif`, `sans` |
@@ -98,7 +100,7 @@ El ZIP instal·lable exclou els tests.
 
 ## Validació d'aquesta versió
 
-Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 77 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
+Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 86 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
 
 `preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat de les visualitzacions amb dades fictícies.
 
@@ -135,9 +137,9 @@ A **Configuració → Petit Popular**, tria el contingut i les dates, selecciona
 
 La previsualització només és accessible a administradors i valida un nonce de sessió. El marc de previsualització no executa scripts. El tema de producció pot modificar la tipografia i els espais respecte a la previsualització. El procés d’inserció encara utilitza shortcodes; aquesta versió no inclou un bloc Gutenberg propi.
 
-Per actualitzar, puja el ZIP 0.3.0 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
+Per actualitzar, puja el ZIP 0.3.1 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
 
-Validació afegida: 30 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 77 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
+Validació afegida: 38 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 86 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
 
 ## Filtres de notícies i biblioteca de rànquings (0.3.0)
 
@@ -163,3 +165,21 @@ El botó **Nou rànquing** inicia una configuració nova. **Elimina** demana con
 Per recuperar un codi antic, obre **Recupera un shortcode anterior**, enganxa'l i prem **Recupera les opcions**. Després posa-hi un nom i desa'l. Per vincular les futures edicions al rànquing desat, substitueix una vegada el codi antic pel nou codi amb ID. Els codis antics continuen funcionant amb els nous filtres, però no es converteixen automàticament en configuracions desades.
 
 Validació de la versió: 77 comprovacions WordPress multisite, 30 d'interacció del panell, 26 de dates i factors i 6 del seguiment de visites. Events Calendar Pro i el tema de producció continuen requerint validació al vostre entorn de proves.
+
+## Sense foto i controls més clars (0.3.1)
+
+- **Fotografia:** tria «Amb foto» o «Sense foto». Sense foto no es genera cap imatge ni espai reservat; el número es mostra al costat del titular. Funciona en tots quatre dissenys i amb notícies o esdeveniments.
+- **Color del rànquing:** «Utilitza el color del mitjà» o «Tria un altre color», amb selector visual. No cal escriure codis HEX.
+- **Forma de les cantonades:** rectes, lleugerament arrodonides, arrodonides o molt arrodonides.
+- **Separació entre elements:** compacta, normal, àmplia o molt àmplia. També pots conservar la configuració general de la web.
+- **Mida dels números:** visible (24 px), gran (32 px, per defecte) o molt gran (40 px). Els codis antics i els rànquings desats també adopten la nova mida per defecte.
+
+Els valors numèrics personalitzats dels codis anteriors es conserven i apareixen com una opció personalitzada en recuperar-los. Els colors HEX abreujats s'expandeixen al seu equivalent de sis dígits per al selector visual.
+
+Exemple de llista vertical sense foto:
+
+```text
+[petit_popular type="posts" layout="vertical" show_image="no" rank_size="40" limit="5"]
+```
+
+Validació actualitzada: 86 comprovacions WordPress multisite i 38 d'interacció del panell.

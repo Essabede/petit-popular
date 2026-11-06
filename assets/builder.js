@@ -44,7 +44,18 @@
   function populate(ranking) {
     savedId = Number(ranking.id) || 0;
     nameInput.value = ranking.name || '';
-    for (const el of fields) el.value = String(ranking.args?.[el.dataset.pp] ?? config?.defaults?.[el.dataset.pp] ?? '');
+    for (const el of fields) {
+      const value = String(ranking.args?.[el.dataset.pp] ?? config?.defaults?.[el.dataset.pp] ?? '');
+      if (el.tagName === 'SELECT' && ![...el.options].some(option => option.value === value)) el.add(new Option(`Personalitzat (${value} px)`, value));
+      el.value = value;
+    }
+    const customAccent = root.querySelector('[data-pp="accent"]').value;
+    document.getElementById('pp-color-mode').value = customAccent ? 'custom' : 'brand';
+    if (customAccent) {
+      const expanded = /^#[0-9a-f]{3}$/i.test(customAccent) ? '#' + [...customAccent.slice(1)].map(c => c + c).join('') : customAccent;
+      document.getElementById('pp-accent-picker').value = expanded;
+      root.querySelector('[data-pp="accent"]').value = document.getElementById('pp-accent-picker').value;
+    }
     savedSnapshot = snapshot();
     savedSelect.value = savedId ? String(savedId) : '';
     update();
@@ -150,12 +161,15 @@
     }
   }
   function update() {
+    const customColor = document.getElementById('pp-color-mode').value === 'custom';
+    root.querySelector('[data-pp="accent"]').value = customColor ? document.getElementById('pp-accent-picker').value : '';
     const values = Object.fromEntries(fields.map(el => [el.dataset.pp, el.value]));
     for (const el of fields) {
       const k = el.dataset.pp;
       let visible = true;
       if (k === 'post_months') visible = values.type === 'posts';
-      if (k === 'image_position') visible = values.layout === 'vertical';
+      if (k === 'image_position') visible = values.layout === 'vertical' && values.show_image !== 'no';
+      if (k === 'accent') visible = customColor;
       if (k === 'columns') visible = !['vertical', 'list'].includes(values.layout);
       if (k === 'days') visible = values.period === 'days';
       if (['from', 'to'].includes(k)) visible = values.period === 'custom';

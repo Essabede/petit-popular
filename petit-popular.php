@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Petit Popular
  * Description: Rànquings de notícies i d'Events Calendar, amb períodes, factors i dissenys per web.
- * Version: 0.3.0
+ * Version: 0.3.1
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Petit
@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes.php';
 require_once __DIR__ . '/saved.php';
 
 final class Petit_Popular {
-    const VERSION = '0.3.0';
+    const VERSION = '0.3.1';
     const OPTION = 'petit_popular_settings';
 
     public static function boot() {
@@ -210,7 +210,7 @@ final class Petit_Popular {
         return ['type' => 'posts', 'period' => '7d', 'days' => 7, 'from' => '', 'to' => '',
             'event_period' => 'next', 'event_days' => 14, 'event_from' => '', 'event_to' => '', 'ongoing' => 'yes',
             'post_months' => 6, 'category' => '', 'limit' => 5, 'layout' => 'cards', 'columns' => 3, 'image_position' => 'side',
-            'show_count' => 'no', 'show_excerpt' => 'no', 'title' => '', 'accent' => '', 'radius' => '', 'gap' => '', 'font' => 'theme', 'title_size' => 20, 'brand' => 'site'];
+            'show_image' => 'yes', 'rank_size' => 32, 'show_count' => 'no', 'show_excerpt' => 'no', 'title' => '', 'accent' => '', 'radius' => '', 'gap' => '', 'font' => 'theme', 'title_size' => 20, 'brand' => 'site'];
     }
 
     public static function shortcode($atts = []) {
@@ -242,10 +242,12 @@ final class Petit_Popular {
         $fonts = ['theme' => 'inherit', 'serif' => 'Georgia,serif', 'sans' => 'Arial,sans-serif', 'nunito' => 'Nunito,Arial,sans-serif'];
         $font = $fonts[$a['font']] ?? 'inherit';
         $title_size = max(14, min(48, (int) $a['title_size']));
-        $style = "--pp-font:$font;--pp-title-size:{$title_size}px;--pp-accent:$accent;--pp-radius:{$radius}px;--pp-gap:{$gap}px;--pp-columns:$columns";
+        $rank_size = max(20, min(48, (int) $a['rank_size']));
+        $image_class = $a['show_image'] === 'no' ? 'pp-no-image' : 'pp-with-image';
+        $style = "--pp-rank-size:{$rank_size}px;--pp-font:$font;--pp-title-size:{$title_size}px;--pp-accent:$accent;--pp-radius:{$radius}px;--pp-gap:{$gap}px;--pp-columns:$columns";
         ob_start();
         ?>
-        <section class="petit-popular pp-<?php echo esc_attr($layout); ?> pp-image-<?php echo esc_attr($image_position); ?>" style="<?php echo esc_attr($style); ?>" aria-label="<?php echo esc_attr($a['title'] ?: 'Continguts populars'); ?>">
+        <section class="petit-popular pp-<?php echo esc_attr($layout); ?> pp-image-<?php echo esc_attr($image_position); ?> <?php echo esc_attr($image_class); ?>" style="<?php echo esc_attr($style); ?>" aria-label="<?php echo esc_attr($a['title'] ?: 'Continguts populars'); ?>">
             <?php if ($a['title'] !== '') : ?><h2 class="pp-heading"><?php echo esc_html($a['title']); ?></h2><?php endif; ?>
             <ol class="pp-items">
             <?php foreach ($rows as $index => $row) :
@@ -256,11 +258,14 @@ final class Petit_Popular {
                 $title = $demo ? $row->demo_title : get_the_title($id);
                 ?>
                 <li class="pp-item"><article class="pp-card">
+                    <?php if ($a['show_image'] !== 'no') : ?>
                     <a class="pp-image" href="<?php echo esc_url($url); ?>" tabindex="-1" aria-hidden="true">
                         <?php if ($demo) { echo '<span class="pp-demo-art" aria-hidden="true"></span>'; } else { echo get_the_post_thumbnail($id, 'medium_large', ['loading' => 'lazy', 'alt' => '']); } ?>
                         <span class="pp-rank"><?php echo (int) $index + 1; ?></span>
                     </a>
+                    <?php endif; ?>
                     <div class="pp-body">
+                        <?php if ($a['show_image'] === 'no') : ?><span class="pp-rank" aria-hidden="true"><?php echo (int) $index + 1; ?></span><?php endif; ?>
                         <h3 class="pp-title"><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($title); ?></a></h3>
                         <?php
                         $date = $demo ? $row->demo_date->format('d/m/Y') : ($is_event && function_exists('tribe_get_start_date')
@@ -351,11 +356,17 @@ final class Petit_Popular {
         <?php self::select('ongoing', 'Incloure esdeveniments en curs', ['yes' => 'Sí', 'no' => 'No']); ?>
         </fieldset><fieldset class="pp-control-group"><legend>2. Disseny</legend>
         <?php self::select('layout', 'Disseny', ['cards' => 'Targetes', 'list' => 'Llista amb imatges', 'hero' => 'Primer destacat', 'vertical' => 'Rànquing vertical']); ?>
+        <?php self::select('show_image', 'Fotografia', ['yes' => 'Amb foto', 'no' => 'Sense foto']); ?>
+        <?php self::select('rank_size', 'Mida dels números', ['32' => 'Gran', '24' => 'Visible', '40' => 'Molt gran']); ?>
         <?php self::select('image_position', 'Imatge al rànquing vertical', ['side' => 'Al costat del text (compacte)', 'top' => 'Al damunt del text (targetes apilades)']); ?>
         <?php self::select('show_count', 'Mostrar visualitzacions', ['no' => 'No', 'yes' => 'Sí']); ?>
         <?php self::select('brand', 'Identitat d’aquest rànquing', ['site' => 'La configurada a la web', 'sabadell' => 'Petit Sabadell', 'terrassa' => 'Petit Terrassa']); ?>
         <?php self::select('font', 'Tipografia', ['theme' => 'La del tema', 'serif' => 'Editorial (Georgia)', 'sans' => 'Sense serifa (Arial)', 'nunito' => 'Nunito (si està instal·lada al tema)']); ?>
-        <?php self::input('title_size', 'Mida dels titulars (14–48 px)', 'number', '20'); self::input('accent', 'Color propi (opcional, #hex)'); self::input('radius', 'Arrodoniment propi (opcional, px)', 'number'); self::input('gap', 'Espaiat propi (opcional, px)', 'number'); ?>
+        <?php self::input('title_size', 'Mida dels titulars (px)', 'number', '20'); ?>
+        <p><label for="pp-color-mode">Color del rànquing</label><select id="pp-color-mode"><option value="brand">Utilitza el color del mitjà</option><option value="custom">Tria un altre color</option></select></p>
+        <p><label for="pp-accent-picker">Tria el color</label><input type="color" id="pp-accent-picker" value="<?php echo esc_attr($s['accent']); ?>"><input type="hidden" id="pp-accent" data-pp="accent" value=""></p>
+        <?php self::select('radius', 'Forma de les cantonades', ['' => 'La configurada a la web', '0' => 'Rectes', '8' => 'Lleugerament arrodonides', '16' => 'Arrodonides', '24' => 'Molt arrodonides']); ?>
+        <?php self::select('gap', 'Separació entre elements', ['' => 'La configurada a la web', '8' => 'Compacta', '16' => 'Normal', '24' => 'Àmplia', '32' => 'Molt àmplia']); ?>
         <?php self::input('title', 'Títol del rànquing'); self::input('category', 'Slug de categoria (opcional)'); self::input('limit', 'Nombre d’elements (1–24)', 'number', '5'); self::input('columns', 'Columnes (1–4)', 'number', '3'); ?>
         </fieldset><div class="pp-insert"><h3>3. Desa’l i insereix-lo a WordPress</h3><label for="pp-ranking-name">Nom intern del rànquing</label><input id="pp-ranking-name" type="text" maxlength="160" placeholder="Rànquing de la portada"><button type="button" id="pp-save" class="button button-primary">Desa el rànquing</button><p id="pp-save-status" role="status"></p><p>Copia el codi i enganxa’l en un bloc «Shortcode» de la pàgina o del widget.</p>
         <label for="pp-code" class="screen-reader-text">Codi del rànquing</label><textarea readonly id="pp-code" rows="4"></textarea>

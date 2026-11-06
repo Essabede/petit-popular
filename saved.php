@@ -30,7 +30,7 @@ final class Petit_Popular_Saved {
             }
         }
         $enums = ['type' => ['posts','events'], 'layout' => ['cards','list','vertical','hero'],
-            'image_position' => ['side','top'], 'show_count' => ['yes','no'], 'ongoing' => ['yes','no'],
+            'image_position' => ['side','top'], 'show_image' => ['yes','no'], 'show_count' => ['yes','no'], 'ongoing' => ['yes','no'],
             'brand' => ['site','sabadell','terrassa'], 'font' => ['theme','serif','sans','nunito']];
         foreach ($enums as $key => $allowed) {
             if (!in_array($args[$key], $allowed, true)) { throw new InvalidArgumentException('Valor no vàlid: ' . $key); }
@@ -38,7 +38,7 @@ final class Petit_Popular_Saved {
         Petit_Popular_Dates::range($args['period'], $args['days'], $args['from'], $args['to']);
         if ($args['type'] === 'posts') { Petit_Popular_Dates::publication_start($args['post_months']); }
         else { Petit_Popular_Dates::events($args['event_period'], $args['event_days'], $args['event_from'], $args['event_to']); }
-        foreach (['limit' => [1,24], 'columns' => [1,4], 'title_size' => [14,48], 'radius' => [0,48], 'gap' => [0,64]] as $key => $bounds) {
+        foreach (['limit' => [1,24], 'columns' => [1,4], 'title_size' => [14,48], 'rank_size' => [20,48], 'radius' => [0,48], 'gap' => [0,64]] as $key => $bounds) {
             if ($args[$key] === '') { continue; }
             if (!preg_match('/^\d+$/', (string) $args[$key]) || $args[$key] < $bounds[0] || $args[$key] > $bounds[1]) {
                 throw new InvalidArgumentException('Valor fora de rang: ' . $key);

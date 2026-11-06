@@ -95,6 +95,12 @@ pp_check(strpos($compact, 'pp-category') === false, 'No category or publication 
 pp_check(strpos($compact, '<time datetime="' . get_the_date('Y-m-d', $a) . '">' . get_the_date('d/m/Y', $a) . '</time>') !== false, 'News publication date rendered');
 pp_check(strpos($compact, esc_url(get_permalink($a))) !== false, 'Link to the original news item');
 
+foreach (['cards', 'list', 'hero', 'vertical'] as $no_image_layout) {
+    $without = Petit_Popular::shortcode(['layout' => $no_image_layout, 'show_image' => 'no', 'rank_size' => 40]);
+    pp_check(strpos($without, 'pp-no-image') !== false && strpos($without, 'class="pp-image"') === false && strpos($without, '<img') === false, 'No image rendered for ' . $no_image_layout);
+    pp_check(strpos($without, 'class="pp-rank"') !== false && strpos($without, '--pp-rank-size:40px') !== false, 'Prominent ranking preserved without photo for ' . $no_image_layout);
+}
+
 // Exercise the actual public counter, including its authorization and JSON output.
 if (!defined('DOING_AJAX')) { define('DOING_AJAX', true); }
 add_filter('wp_die_ajax_handler', function () { return function () { throw new RuntimeException('ajax complete'); }; });
@@ -131,11 +137,12 @@ function pp_saved($data) {
 }
 wp_set_current_user(1);
 $manage_nonce = wp_create_nonce('petit_popular_preview');
-$save = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'name' => 'Rànquing de la portada', 'args' => ['layout' => 'vertical', 'title' => 'L’actualitat "del dia"']]);
+$save = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'name' => 'Rànquing de la portada', 'args' => ['layout' => 'vertical', 'title' => 'L’actualitat "del dia"', 'show_image' => 'no', 'rank_size' => 40, 'radius' => 9, 'gap' => 13]]);
 pp_check($save['success'], 'Named ranking saved');
 $ranking_id = $save['data']['ranking']['id'];
 pp_check($ranking_id > 0 && get_post_type($ranking_id) === Petit_Popular_Saved::TYPE, 'Ranking stored as private post type');
 pp_check(count($save['data']['saved']) === 1, 'Named ranking listed');
+pp_check($save['data']['ranking']['args']['show_image'] === 'no' && (int) $save['data']['ranking']['args']['rank_size'] === 40, 'Photo visibility and rank size persist in named ranking');
 $saved_html = Petit_Popular::shortcode(['id' => $ranking_id]);
 pp_check(strpos($saved_html, 'pp-vertical') !== false && strpos($saved_html, 'L’actualitat &quot;del dia&quot;') !== false, 'Stable shortcode renders saved options and preserves quotes');
 $edited = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'id' => $ranking_id, 'name' => 'Rànquing intern', 'args' => ['layout' => 'list', 'title' => 'Canvi desat']]);
