@@ -42,3 +42,6 @@
 .pp-library details label{display:block;margin-top:10px}
 #pp-ranking-name{display:block;width:100%;margin:8px 0 12px}
 #pp-save-status{font-size:12px;line-height:1.5}
+
+.pp-icon-plain{grid-template-columns:1fr;background:none}
+.pp-icon-plain i{background:linear-gradient(90deg,#2e9c87 8%,transparent 8%,transparent 15%,#a7aaad 15%,#a7aaad 85%,transparent 85%);border-radius:0;border-bottom:1px solid #dcdcde}

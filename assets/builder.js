@@ -56,6 +56,15 @@
       document.getElementById('pp-accent-picker').value = expanded;
       root.querySelector('[data-pp="accent"]').value = document.getElementById('pp-accent-picker').value;
     }
+    for (const key of ['title_color', 'date_color']) {
+      const el = root.querySelector(`[data-pp="${key}"]`);
+      document.getElementById(`pp-${key}-mode`).value = el.value ? 'custom' : 'default';
+      if (el.value) {
+        const hex = /^#[0-9a-f]{3}$/i.test(el.value) ? '#' + [...el.value.slice(1)].map(c => c + c).join('') : el.value;
+        document.getElementById(`pp-${key}-picker`).value = hex;
+        el.value = document.getElementById(`pp-${key}-picker`).value;
+      }
+    }
     savedSnapshot = snapshot();
     savedSelect.value = savedId ? String(savedId) : '';
     update();
@@ -163,6 +172,9 @@
   function update() {
     const customColor = document.getElementById('pp-color-mode').value === 'custom';
     root.querySelector('[data-pp="accent"]').value = customColor ? document.getElementById('pp-accent-picker').value : '';
+    for (const key of ['title_color', 'date_color']) {
+      root.querySelector(`[data-pp="${key}"]`).value = document.getElementById(`pp-${key}-mode`).value === 'custom' ? document.getElementById(`pp-${key}-picker`).value : '';
+    }
     const values = Object.fromEntries(fields.map(el => [el.dataset.pp, el.value]));
     for (const el of fields) {
       const k = el.dataset.pp;
@@ -170,7 +182,9 @@
       if (k === 'post_months') visible = values.type === 'posts';
       if (k === 'image_position') visible = values.layout === 'vertical' && values.show_image !== 'no';
       if (k === 'accent') visible = customColor;
-      if (k === 'columns') visible = !['vertical', 'list'].includes(values.layout);
+      if (k === 'columns') visible = !['vertical', 'list', 'plain'].includes(values.layout);
+      if (k === 'radius') visible = values.layout !== 'plain';
+      if (['title_color', 'date_color'].includes(k)) visible = document.getElementById(`pp-${k}-mode`).value === 'custom';
       if (k === 'days') visible = values.period === 'days';
       if (['from', 'to'].includes(k)) visible = values.period === 'custom';
       if (['event_period', 'ongoing'].includes(k)) visible = values.type === 'events';

@@ -1,13 +1,13 @@
-> **Descarrega el plugin instal·lable:** [petit-popular-0.3.1.zip](dist/petit-popular-0.3.1.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
+> **Descarrega el plugin instal·lable:** [petit-popular-0.3.2.zip](dist/petit-popular-0.3.2.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
 
-# Petit Popular · 0.3.1 (prototip)
+# Petit Popular · 0.3.2 (prototip)
 
 Plugin per a WordPress 6.4+ i PHP 8.0+. Compatible amb activació per web o per xarxa multisite. No modifica WordPress Popular Posts ni importa les seves dades. No requereix cap servei extern.
 
 ## Instal·lació de prova
 
 1. Fes servir primer una còpia de proves del multisite, amb còpia de seguretat.
-2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.3.1.zip`.
+2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.3.2.zip`.
 3. Activa'l a la xarxa o a la web que vulguis provar. Les taules es creen en la primera petició de cada web, incloent les webs creades després de l'activació.
 4. Entra a **Configuració → Petit Popular** de cadascuna de les webs. Defineix els dos factors i l'estil base.
 5. Genera un shortcode amb els selectors i enganxa'l en un bloc Shortcode. Visita una notícia com a lector no editor per començar a recollir dades.
@@ -55,7 +55,7 @@ Dates de visites i de celebració independents:
 | `post_months` | Antiguitat màxima de publicació de les notícies, entre 1 i 120 mesos; 6 per defecte. Independent del període de visites |
 | `category` | Slug exacte; categoria de notícies o `tribe_events_cat`. No inclou automàticament les categories filles |
 | `limit` | 1–24 |
-| `layout` | `cards`, `list`, `hero`, `vertical` |
+| `layout` | `cards`, `list`, `hero`, `vertical`, `plain` |
 | `image_position` | `side` (imatge al costat) o `top` (imatge al damunt), per a `layout="vertical"` |
 | `columns` | 1–4; s'adapta a pantalles petites |
 | `show_image` | `yes` (amb foto, per defecte) o `no` (sense foto) |
@@ -63,6 +63,7 @@ Dates de visites i de celebració independents:
 | `show_count` | `yes` o `no`; ocult per defecte |
 | `title` | Títol del rànquing |
 | `font` | `theme`, `serif`, `sans` |
+| `title_color`, `date_color` | Color hexadecimal del titular i de la data, respectivament; buits per utilitzar els predeterminats |
 | `title_size` | 14–48 píxels; el primer destacat utilitza una mida adaptativa |
 | `accent`, `radius`, `gap` | Color hexadecimal, radi 0–48 px i separació 0–64 px; si no s'indiquen s'usen els de la web |
 
@@ -100,7 +101,7 @@ El ZIP instal·lable exclou els tests.
 
 ## Validació d'aquesta versió
 
-Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 86 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
+Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 93 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
 
 `preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat de les visualitzacions amb dades fictícies.
 
@@ -139,7 +140,7 @@ La previsualització només és accessible a administradors i valida un nonce de
 
 Per actualitzar, puja el ZIP 0.3.1 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
 
-Validació afegida: 38 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 86 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
+Validació afegida: 42 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 93 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
 
 ## Filtres de notícies i biblioteca de rànquings (0.3.0)
 
@@ -183,3 +184,15 @@ Exemple de llista vertical sense foto:
 ```
 
 Validació actualitzada: 86 comprovacions WordPress multisite i 38 d'interacció del panell.
+
+## Colors de lletra i llistat sense targetes (0.3.2)
+
+Al panell hi ha selectors independents per al **Color dels titulars** i el **Color de les dates**. Tria «Predeterminat» o «Tria un color». Els colors s’apliquen en directe a la previsualització i es desen amb el rànquing. El color del titular també s'aplica al títol general del rànquing si s'ha definit.
+
+El nou disseny **Llistat sense targetes** (`layout="plain"`) mostra files separades per línies, sense fons, ombres ni vores de targeta. Es pot combinar amb foto o sense foto. Manté els números grans, el titular enllaçat i la data. No mostra controls de cantonades ni de columnes perquè no s’hi apliquen. Les targetes i els altres dissenys continuen disponibles.
+
+```text
+[petit_popular layout="plain" show_image="no" title_color="#20252d" date_color="#526070" rank_size="32"]
+```
+
+Aquesta actualització conserva les opcions i els rànquings desats. Validació: 93 comprovacions WordPress multisite i 42 d’interacció del panell.

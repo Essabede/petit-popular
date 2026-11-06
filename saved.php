@@ -29,7 +29,7 @@ final class Petit_Popular_Saved {
                 $args[$key] = sanitize_text_field((string) $input[$key]);
             }
         }
-        $enums = ['type' => ['posts','events'], 'layout' => ['cards','list','vertical','hero'],
+        $enums = ['type' => ['posts','events'], 'layout' => ['cards','list','vertical','hero','plain'],
             'image_position' => ['side','top'], 'show_image' => ['yes','no'], 'show_count' => ['yes','no'], 'ongoing' => ['yes','no'],
             'brand' => ['site','sabadell','terrassa'], 'font' => ['theme','serif','sans','nunito']];
         foreach ($enums as $key => $allowed) {
@@ -44,7 +44,9 @@ final class Petit_Popular_Saved {
                 throw new InvalidArgumentException('Valor fora de rang: ' . $key);
             }
         }
-        if ($args['accent'] !== '' && !sanitize_hex_color($args['accent'])) { throw new InvalidArgumentException('El color ha de ser hexadecimal.'); }
+        foreach (['accent', 'title_color', 'date_color'] as $field) {
+            if ($args[$field] !== '' && !sanitize_hex_color($args[$field])) { throw new InvalidArgumentException('El color ha de ser hexadecimal.'); }
+        }
         return $args;
     }
     public static function import($code) {

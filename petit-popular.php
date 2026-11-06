@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Petit Popular
  * Description: Rànquings de notícies i d'Events Calendar, amb períodes, factors i dissenys per web.
- * Version: 0.3.1
+ * Version: 0.3.2
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Petit
@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes.php';
 require_once __DIR__ . '/saved.php';
 
 final class Petit_Popular {
-    const VERSION = '0.3.1';
+    const VERSION = '0.3.2';
     const OPTION = 'petit_popular_settings';
 
     public static function boot() {
@@ -210,7 +210,7 @@ final class Petit_Popular {
         return ['type' => 'posts', 'period' => '7d', 'days' => 7, 'from' => '', 'to' => '',
             'event_period' => 'next', 'event_days' => 14, 'event_from' => '', 'event_to' => '', 'ongoing' => 'yes',
             'post_months' => 6, 'category' => '', 'limit' => 5, 'layout' => 'cards', 'columns' => 3, 'image_position' => 'side',
-            'show_image' => 'yes', 'rank_size' => 32, 'show_count' => 'no', 'show_excerpt' => 'no', 'title' => '', 'accent' => '', 'radius' => '', 'gap' => '', 'font' => 'theme', 'title_size' => 20, 'brand' => 'site'];
+            'show_image' => 'yes', 'rank_size' => 32, 'show_count' => 'no', 'show_excerpt' => 'no', 'title' => '', 'accent' => '', 'radius' => '', 'gap' => '', 'font' => 'theme', 'title_size' => 20, 'title_color' => '', 'date_color' => '', 'brand' => 'site'];
     }
 
     public static function shortcode($atts = []) {
@@ -233,7 +233,7 @@ final class Petit_Popular {
     private static function render($a, $rows) {
         $settings = self::settings();
         $factor = $settings[$a['type'] === 'events' ? 'event_factor' : 'post_factor'];
-        $layout = in_array($a['layout'], ['cards', 'list', 'hero', 'vertical'], true) ? $a['layout'] : 'cards';
+        $layout = in_array($a['layout'], ['cards', 'list', 'hero', 'vertical', 'plain'], true) ? $a['layout'] : 'cards';
         $image_position = $a['image_position'] === 'top' ? 'top' : 'side';
         $accent = sanitize_hex_color($a['accent']) ?: (self::brand_color($a['brand']) ?: $settings['accent']);
         $radius = $a['radius'] === '' ? $settings['radius'] : max(0, min(48, (int) $a['radius']));
@@ -245,6 +245,10 @@ final class Petit_Popular {
         $rank_size = max(20, min(48, (int) $a['rank_size']));
         $image_class = $a['show_image'] === 'no' ? 'pp-no-image' : 'pp-with-image';
         $style = "--pp-rank-size:{$rank_size}px;--pp-font:$font;--pp-title-size:{$title_size}px;--pp-accent:$accent;--pp-radius:{$radius}px;--pp-gap:{$gap}px;--pp-columns:$columns";
+        foreach (['title_color' => '--pp-title-color', 'date_color' => '--pp-date-color'] as $field => $property) {
+            $color = sanitize_hex_color($a[$field]);
+            if ($color) { $style .= ";$property:$color"; }
+        }
         ob_start();
         ?>
         <section class="petit-popular pp-<?php echo esc_attr($layout); ?> pp-image-<?php echo esc_attr($image_position); ?> <?php echo esc_attr($image_class); ?>" style="<?php echo esc_attr($style); ?>" aria-label="<?php echo esc_attr($a['title'] ?: 'Continguts populars'); ?>">
@@ -355,7 +359,7 @@ final class Petit_Popular {
         <?php self::input('event_days', 'X dies d’agenda', 'number', '14'); self::input('event_from', 'Agenda des de', 'date'); self::input('event_to', 'Agenda fins a', 'date'); ?>
         <?php self::select('ongoing', 'Incloure esdeveniments en curs', ['yes' => 'Sí', 'no' => 'No']); ?>
         </fieldset><fieldset class="pp-control-group"><legend>2. Disseny</legend>
-        <?php self::select('layout', 'Disseny', ['cards' => 'Targetes', 'list' => 'Llista amb imatges', 'hero' => 'Primer destacat', 'vertical' => 'Rànquing vertical']); ?>
+        <?php self::select('layout', 'Disseny', ['cards' => 'Targetes', 'list' => 'Llista amb imatges', 'hero' => 'Primer destacat', 'vertical' => 'Rànquing vertical', 'plain' => 'Llistat sense targetes']); ?>
         <?php self::select('show_image', 'Fotografia', ['yes' => 'Amb foto', 'no' => 'Sense foto']); ?>
         <?php self::select('rank_size', 'Mida dels números', ['32' => 'Gran', '24' => 'Visible', '40' => 'Molt gran']); ?>
         <?php self::select('image_position', 'Imatge al rànquing vertical', ['side' => 'Al costat del text (compacte)', 'top' => 'Al damunt del text (targetes apilades)']); ?>
@@ -365,6 +369,10 @@ final class Petit_Popular {
         <?php self::input('title_size', 'Mida dels titulars (px)', 'number', '20'); ?>
         <p><label for="pp-color-mode">Color del rànquing</label><select id="pp-color-mode"><option value="brand">Utilitza el color del mitjà</option><option value="custom">Tria un altre color</option></select></p>
         <p><label for="pp-accent-picker">Tria el color</label><input type="color" id="pp-accent-picker" value="<?php echo esc_attr($s['accent']); ?>"><input type="hidden" id="pp-accent" data-pp="accent" value=""></p>
+        <?php foreach (['title_color' => 'Color dels titulars', 'date_color' => 'Color de les dates'] as $field => $label) : ?>
+        <p><label for="pp-<?php echo esc_attr($field); ?>-mode"><?php echo esc_html($label); ?></label><select id="pp-<?php echo esc_attr($field); ?>-mode"><option value="default">Predeterminat</option><option value="custom">Tria un color</option></select></p>
+        <p><label for="pp-<?php echo esc_attr($field); ?>-picker"><?php echo esc_html($label); ?></label><input type="color" id="pp-<?php echo esc_attr($field); ?>-picker" value="<?php echo $field === 'title_color' ? '#20252d' : '#526070'; ?>"><input type="hidden" data-pp="<?php echo esc_attr($field); ?>" id="pp-<?php echo esc_attr($field); ?>" value=""></p>
+        <?php endforeach; ?>
         <?php self::select('radius', 'Forma de les cantonades', ['' => 'La configurada a la web', '0' => 'Rectes', '8' => 'Lleugerament arrodonides', '16' => 'Arrodonides', '24' => 'Molt arrodonides']); ?>
         <?php self::select('gap', 'Separació entre elements', ['' => 'La configurada a la web', '8' => 'Compacta', '16' => 'Normal', '24' => 'Àmplia', '32' => 'Molt àmplia']); ?>
         <?php self::input('title', 'Títol del rànquing'); self::input('category', 'Slug de categoria (opcional)'); self::input('limit', 'Nombre d’elements (1–24)', 'number', '5'); self::input('columns', 'Columnes (1–4)', 'number', '3'); ?>
