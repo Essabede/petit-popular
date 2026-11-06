@@ -32,3 +32,13 @@
 .pp-insert h3{margin-top:0}
 @media(max-width:1100px){.pp-workspace{grid-template-columns:1fr}.pp-preview-panel{position:static;grid-row:1}.pp-controls{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pp-insert{grid-column:1/-1}}
 @media(max-width:640px){.pp-controls{display:block}.pp-preview-panel{padding:12px}}
+.pp-library{max-width:1356px;background:white;padding:20px;border:1px solid #dcdcde;border-radius:12px;margin:20px 0}
+.pp-library>label{display:block;font-weight:600;margin-bottom:8px}
+.pp-library>select{min-width:240px;max-width:100%}
+.pp-library>button{margin:4px}
+.pp-library details{margin-top:16px}
+.pp-library summary{cursor:pointer;font-weight:550}
+.pp-library textarea{display:block;width:100%;max-width:700px;margin:10px 0}
+.pp-library details label{display:block;margin-top:10px}
+#pp-ranking-name{display:block;width:100%;margin:8px 0 12px}
+#pp-save-status{font-size:12px;line-height:1.5}

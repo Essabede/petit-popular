@@ -1,18 +1,18 @@
-> **Descarrega el plugin instal·lable:** [petit-popular-0.2.0.zip](dist/petit-popular-0.2.0.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
+> **Descarrega el plugin instal·lable:** [petit-popular-0.3.0.zip](dist/petit-popular-0.3.0.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
 
-# Petit Popular · 0.2.0 (prototip)
+# Petit Popular · 0.3.0 (prototip)
 
 Plugin per a WordPress 6.4+ i PHP 8.0+. Compatible amb activació per web o per xarxa multisite. No modifica WordPress Popular Posts ni importa les seves dades. No requereix cap servei extern.
 
 ## Instal·lació de prova
 
 1. Fes servir primer una còpia de proves del multisite, amb còpia de seguretat.
-2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.2.0.zip`.
+2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.3.0.zip`.
 3. Activa'l a la xarxa o a la web que vulguis provar. Les taules es creen en la primera petició de cada web, incloent les webs creades després de l'activació.
 4. Entra a **Configuració → Petit Popular** de cadascuna de les webs. Defineix els dos factors i l'estil base.
 5. Genera un shortcode amb els selectors i enganxa'l en un bloc Shortcode. Visita una notícia com a lector no editor per començar a recollir dades.
 
-El factor de notícies i el d'esdeveniments es desen per web: Sabadell i Terrassa poden tenir quatre valors diferents. El plugin conserva les visites observades i aplica el factor només en renderitzar els seus rànquings. No altera comptadors d'altres plugins. Els recomptes públics ajustats es mostren com a **punts de popularitat**. Per defecte estan ocults. Els administradors poden consultar les visites reals dels continguts principals dels últims set dies.
+El factor de notícies i el d'esdeveniments es desen per web: Sabadell i Terrassa poden tenir quatre valors diferents. El plugin conserva les visites observades i aplica el factor només en renderitzar els seus rànquings. No altera comptadors d'altres plugins. Els recomptes públics ajustats es mostren com a **visualitzacions**. Per defecte estan ocults. Els administradors poden consultar les visites reals dels continguts principals dels últims set dies.
 
 ## Exemples
 
@@ -52,6 +52,7 @@ Dates de visites i de celebració independents:
 | `event_days` | 1–3660, quan `event_period="next"` |
 | `event_from`, `event_to` | AAAA-MM-DD, quan `event_period="custom"` |
 | `ongoing` | `yes` o `no`: incloure els que han començat abans del primer dia de l'interval i encara continuen |
+| `post_months` | Antiguitat màxima de publicació de les notícies, entre 1 i 120 mesos; 6 per defecte. Independent del període de visites |
 | `category` | Slug exacte; categoria de notícies o `tribe_events_cat`. No inclou automàticament les categories filles |
 | `limit` | 1–24 |
 | `layout` | `cards`, `list`, `hero`, `vertical` |
@@ -97,9 +98,9 @@ El ZIP instal·lable exclou els tests.
 
 ## Validació d'aquesta versió
 
-Comprovacions executades: 22 de dates i factors, 6 de seguiment al navegador simulat i 51 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
+Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 77 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
 
-`preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat dels punts amb dades fictícies.
+`preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat de les visualitzacions amb dades fictícies.
 
 ## Rànquing vertical
 
@@ -121,7 +122,7 @@ El manual especifica Nunito (pàgina 6). Pots seleccionar `font="nunito"` si el 
 
 ## Targetes orientades al clic (0.1.3)
 
-Les notícies mostren imatge, titular enllaçat i dia de publicació. Els esdeveniments mostren imatge, títol enllaçat i dia d’inici de celebració. S’han retirat categories, resums, nom del mitjà, hores i llocs. La imatge també enllaça al contingut. Es mantenen la posició al rànquing i els punts opcionals (ocults per defecte). Els shortcodes antics amb `show_excerpt="yes"` continuen funcionant però ja no mostren extractes.
+Les notícies mostren imatge, titular enllaçat i dia de publicació. Els esdeveniments mostren imatge, títol enllaçat i dia d’inici de celebració. S’han retirat categories, resums, nom del mitjà, hores i llocs. La imatge també enllaça al contingut. Es mantenen la posició al rànquing i les visualitzacions opcionals (ocults per defecte). Els shortcodes antics amb `show_excerpt="yes"` continuen funcionant però ja no mostren extractes.
 
 ## Panell visual amb previsualització en directe (0.2.0)
 
@@ -134,6 +135,31 @@ A **Configuració → Petit Popular**, tria el contingut i les dates, selecciona
 
 La previsualització només és accessible a administradors i valida un nonce de sessió. El marc de previsualització no executa scripts. El tema de producció pot modificar la tipografia i els espais respecte a la previsualització. El procés d’inserció encara utilitza shortcodes; aquesta versió no inclou un bloc Gutenberg propi.
 
-Per actualitzar, puja el ZIP 0.2.0 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
+Per actualitzar, puja el ZIP 0.3.0 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
 
-Validació afegida: 17 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 51 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
+Validació afegida: 30 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 77 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
+
+## Filtres de notícies i biblioteca de rànquings (0.3.0)
+
+### Notícies elegibles
+
+A **Configuració de la web i multiplicadors**, selecciona i desa la categoria **Notícies** de cada web. Per defecte es busca el slug `noticies`; si no existeix, es mostra un avís i no s'amplia la cerca a altres entrades. S'inclouen les subcategories de la categoria principal seleccionada. Un filtre `category` addicional restringeix encara més els resultats i no pot evitar aquesta limitació. Els esdeveniments conserven els seus filtres propis.
+
+El camp **Notícies publicades en els últims X mesos** té el valor 6 per defecte i és independent de **Visites rebudes durant**. Per exemple: notícies publicades en els últims sis mesos, ordenades per visites dels últims set dies. Els mesos són naturals, amb el dia de tall inclòs; si el mes de destí és més curt, s'utilitza el seu últim dia. El filtre de publicació també s'aplica als shortcodes antics que no l'especifiquin i als rànquings amb `period="all"`. No s'eliminen estadístiques anteriors.
+
+### Visualitzacions
+
+La sortida pública utilitza **visualitzacions**. Continua aplicant el multiplicador configurat, sense alterar la dada interna real. Es manté l'opció d'ocultar el comptador.
+
+### Desar, recuperar i editar
+
+1. Configura el rànquing i escriu un nom intern, com **Rànquing de la portada**.
+2. Prem **Desa el rànquing**. Obtindràs un codi estable, per exemple `[petit_popular id="123"]`. El número l'assigna WordPress; utilitza sempre el que genera el teu panell.
+3. Copia aquest codi al lloc corresponent de la web. El nom intern no s'afegeix al titular públic del rànquing.
+4. Selecciona'l a **Rànquings desats** i prem **Obre** per modificar-lo. Quan desis els canvis, el mateix codi mostrarà la nova configuració. Buida la memòria cau HTML si la web en fa servir.
+
+El botó **Nou rànquing** inicia una configuració nova. **Elimina** demana confirmació i elimina només la configuració; els codis amb aquell ID deixen de mostrar resultats i les notícies i estadístiques es conserven. La biblioteca és independent per a cada web del multisite. Un ID no es pot traslladar directament entre webs.
+
+Per recuperar un codi antic, obre **Recupera un shortcode anterior**, enganxa'l i prem **Recupera les opcions**. Després posa-hi un nom i desa'l. Per vincular les futures edicions al rànquing desat, substitueix una vegada el codi antic pel nou codi amb ID. Els codis antics continuen funcionant amb els nous filtres, però no es converteixen automàticament en configuracions desades.
+
+Validació de la versió: 77 comprovacions WordPress multisite, 30 d'interacció del panell, 26 de dates i factors i 6 del seguiment de visites. Events Calendar Pro i el tema de producció continuen requerint validació al vostre entorn de proves.

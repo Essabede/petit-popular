@@ -5,6 +5,7 @@ require_once '/wordpress/wp-admin/includes/plugin.php';
 require_once '/wordpress/wp-admin/includes/template.php';
 activate_plugin('petit-popular/petit-popular.php', '', is_multisite());
 Petit_Popular::ensure_schema();
+Petit_Popular_Saved::register();
 $checks = 0;
 function pp_check($condition, $label) {
     global $checks;
@@ -17,10 +18,13 @@ function pp_seed($id, $day, $views) {
 }
 $today = current_datetime()->format('Y-m-d');
 $old = current_datetime()->modify('-40 days')->format('Y-m-d');
+$news = wp_insert_term('Notícies', 'category', ['slug' => 'noticies']);
 $a = wp_insert_post(['post_title' => 'Notícia A', 'post_content' => 'Una notícia de prova.', 'post_status' => 'publish']);
 $b = wp_insert_post(['post_title' => 'Notícia B', 'post_status' => 'publish']);
 $draft = wp_insert_post(['post_title' => 'Privat', 'post_status' => 'draft']);
 $protected = wp_insert_post(['post_title' => 'Contrasenya', 'post_status' => 'publish', 'post_password' => 'test']);
+wp_set_post_terms($a, [$news['term_id']], 'category');
+wp_set_post_terms($b, [$news['term_id']], 'category');
 pp_seed($a, $today, 11); pp_seed($a, $old, 1000); pp_seed($b, $today, 8);
 pp_seed($draft, $today, 9999); pp_seed($protected, $today, 9999);
 $args = Petit_Popular::defaults();
@@ -32,17 +36,41 @@ pp_check((int) $all[0]->real_views === 1011, 'All-time includes historical views
 $custom = Petit_Popular::ranked(array_merge($args, ['period' => 'custom', 'from' => $old, 'to' => $old]));
 pp_check(count($custom) === 1 && (int) $custom[0]->real_views === 1000, 'Exact date interval');
 pp_check(count(Petit_Popular::ranked(array_merge($args, ['limit' => 1]))) === 1, 'Limit');
-$cat = wp_insert_term('Ciutat', 'category', ['slug' => 'ciutat']);
+$cat = wp_insert_term('Ciutat', 'category', ['slug' => 'ciutat', 'parent' => $news['term_id']]);
 wp_set_post_terms($b, [$cat['term_id']], 'category');
 $filtered = Petit_Popular::ranked(array_merge($args, ['category' => 'ciutat']));
 pp_check(count($filtered) === 1 && (int) $filtered[0]->ID === $b, 'Category filter');
+// Publication age is independent of the date on which visits occurred.
+$outside = wp_insert_post(['post_title' => 'Altra categoria', 'post_status' => 'publish']);
+pp_seed($outside, $today, 50000);
+$stale_date = current_datetime()->modify('-7 months')->format('Y-m-d H:i:s');
+$stale = wp_insert_post(['post_title' => 'Notícia antiga', 'post_status' => 'publish', 'post_date' => $stale_date]);
+wp_set_post_terms($stale, [$news['term_id']], 'category'); pp_seed($stale, $today, 40000);
+$recent = Petit_Popular::ranked($args);
+pp_check(count($recent) === 2 && (int) $recent[0]->ID === $a, 'Non-news and old publications excluded despite recent traffic');
+$extended = Petit_Popular::ranked(array_merge($args, ['post_months' => 12]));
+pp_check((int) $extended[0]->ID === $stale, 'Publication age configurable independently');
+$override = Petit_Popular::ranked(array_merge($args, ['category' => 'uncategorized']));
+pp_check(!$override, 'Optional category cannot bypass mandatory news category');
+
+$cutoff = Petit_Popular_Dates::publication_start(6);
+$before_cutoff = (new DateTimeImmutable($cutoff, wp_timezone()))->modify('-1 day')->format('Y-m-d H:i:s');
+$boundary = wp_insert_post(['post_title' => 'Data límit', 'post_status' => 'publish', 'post_date' => $cutoff]);
+$before = wp_insert_post(['post_title' => 'Abans del límit', 'post_status' => 'publish', 'post_date' => $before_cutoff]);
+foreach ([$boundary, $before] as $id) { wp_set_post_terms($id, [$news['term_id']], 'category'); pp_seed($id, $today, 1); }
+$boundary_ids = array_map(static fn($row) => (int) $row->ID, Petit_Popular::ranked($args));
+pp_check(in_array($boundary, $boundary_ids, true) && !in_array($before, $boundary_ids, true), 'Six-month publication cutoff inclusive and exact');
+wp_delete_post($boundary, true); wp_delete_post($before, true);
+$missing_settings = Petit_Popular::settings(); $missing_settings['news_category'] = 'missing-news-category';
+update_option(Petit_Popular::OPTION, $missing_settings);
+pp_check(Petit_Popular::ranked($args) === [], 'Missing news category never falls back to all posts');
 update_option(Petit_Popular::OPTION, ['post_factor' => 4, 'event_factor' => 2]);
 wp_set_current_user(0);
 $html = Petit_Popular::shortcode(['show_count' => 'yes', 'title' => '<script>bad()</script>']);
-pp_check(strpos($html, '44 punts de popularitat') !== false, 'Adjusted score rendered');
-pp_check(strpos($html, '11 punts') === false && strpos($html, 'real_views') === false, 'Real count absent from markup');
+pp_check(strpos($html, '44 visualitzacions') !== false, 'Adjusted score rendered');
+pp_check(strpos($html, '11 visualitzacions') === false && strpos($html, 'real_views') === false, 'Real count absent from markup');
 pp_check(strpos($html, '<script>') === false, 'Title escaped');
-pp_check(strpos(Petit_Popular::shortcode([]), 'punts de popularitat') === false, 'Count hidden by default');
+pp_check(strpos(Petit_Popular::shortcode([]), 'visualitzacions') === false, 'Count hidden by default');
 foreach (['cards', 'list', 'hero', 'vertical'] as $layout) {
     pp_check(strpos(Petit_Popular::shortcode(['layout' => $layout]), 'pp-' . $layout) !== false, 'Layout ' . $layout);
 }
@@ -93,6 +121,42 @@ wp_set_current_user(1);
 pp_check(pp_track($a, wp_create_nonce('petit_popular_' . $a))['success'] === false, 'Editor visits excluded');
 wp_set_current_user(0);
 
+function pp_saved($data) {
+    $_POST = wp_slash($data); $_REQUEST = $_POST;
+    ob_start();
+    try { Petit_Popular_Saved::ajax(); } catch (RuntimeException $e) {
+        if ($e->getMessage() !== 'ajax complete') { throw $e; }
+    }
+    return json_decode(ob_get_clean(), true);
+}
+wp_set_current_user(1);
+$manage_nonce = wp_create_nonce('petit_popular_preview');
+$save = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'name' => 'Rànquing de la portada', 'args' => ['layout' => 'vertical', 'title' => 'L’actualitat "del dia"']]);
+pp_check($save['success'], 'Named ranking saved');
+$ranking_id = $save['data']['ranking']['id'];
+pp_check($ranking_id > 0 && get_post_type($ranking_id) === Petit_Popular_Saved::TYPE, 'Ranking stored as private post type');
+pp_check(count($save['data']['saved']) === 1, 'Named ranking listed');
+$saved_html = Petit_Popular::shortcode(['id' => $ranking_id]);
+pp_check(strpos($saved_html, 'pp-vertical') !== false && strpos($saved_html, 'L’actualitat &quot;del dia&quot;') !== false, 'Stable shortcode renders saved options and preserves quotes');
+$edited = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'id' => $ranking_id, 'name' => 'Rànquing intern', 'args' => ['layout' => 'list', 'title' => 'Canvi desat']]);
+pp_check($edited['success'] && $edited['data']['ranking']['id'] === $ranking_id && count($edited['data']['saved']) === 1, 'Editing keeps stable ID without duplicates');
+pp_check(strpos(Petit_Popular::shortcode(['id' => $ranking_id]), 'Canvi desat') !== false, 'Existing ID reflects updates');
+$loaded = pp_saved(['operation' => 'load', 'nonce' => $manage_nonce, 'id' => $ranking_id]);
+pp_check($loaded['success'] && $loaded['data']['name'] === 'Rànquing intern', 'Saved ranking can be recovered');
+$import = pp_saved(['operation' => 'import', 'nonce' => $manage_nonce, 'code' => '[petit_popular type="posts" period="30d" layout="vertical" title="Títol antic"]']);
+pp_check($import['success'] && $import['data']['id'] === 0 && $import['data']['args']['period'] === '30d', 'Legacy inline shortcode imports without executing');
+$import_id = pp_saved(['operation' => 'import', 'nonce' => $manage_nonce, 'code' => '[petit_popular id="' . $ranking_id . '"]']);
+pp_check($import_id['success'] && $import_id['data']['id'] === $ranking_id, 'Stable shortcode imports current stored options');
+pp_check(!pp_saved(['operation' => 'import', 'nonce' => $manage_nonce, 'code' => '[other_plugin evil="1"]'])['success'], 'Foreign shortcode rejected');
+pp_check(!pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'name' => '', 'args' => []])['success'], 'Empty ranking names rejected');
+pp_check(!pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'name' => 'Incorrecte', 'args' => ['post_months' => '0']])['success'], 'Invalid publication window rejected when saving');
+pp_check(!pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'id' => $a, 'name' => 'No', 'args' => []])['success'], 'Cannot overwrite application posts via ranking endpoint');
+pp_check(!pp_saved(['operation' => 'save', 'nonce' => 'invalid', 'name' => 'No', 'args' => []])['success'], 'Ranking save requires a nonce');
+wp_set_current_user(0);
+pp_check(!pp_saved(['operation' => 'load', 'nonce' => $manage_nonce, 'id' => $ranking_id])['success'], 'Anonymous access to ranking management denied');
+pp_check(Petit_Popular::shortcode(['id' => 999999]) === '', 'Missing ID does not render an unrelated ranking');
+wp_set_current_user(1);
+
 if (is_multisite()) {
     $site = wp_insert_site(['domain' => 'localhost', 'path' => '/terrassa/', 'title' => 'Petit Terrassa', 'user_id' => 1]);
     pp_check(!is_wp_error($site), 'Second site created');
@@ -102,10 +166,18 @@ if (is_multisite()) {
     pp_check(Petit_Popular::table() !== $table, 'Independent table prefix');
     pp_check(Petit_Popular::settings()['post_factor'] === 1, 'Independent defaults');
     pp_check(Petit_Popular::ranked($args) === [], 'No cross-site views');
+    pp_check(Petit_Popular_Saved::listing() === [], 'No cross-site saved rankings');
+    pp_check(is_wp_error(Petit_Popular_Saved::get($ranking_id)), 'Ranking IDs cannot retrieve another site’s record');
     update_option(Petit_Popular::OPTION, ['post_factor' => 9]);
     restore_current_blog();
     pp_check(Petit_Popular::settings()['post_factor'] === 4, 'Original site settings preserved');
 } else { echo "NOTE: multisite tests not executed\n"; }
+wp_set_current_user(1);
+$deleted = pp_saved(['operation' => 'delete', 'nonce' => wp_create_nonce('petit_popular_preview'), 'id' => $ranking_id]);
+pp_check($deleted['success'] && $deleted['data']['saved'] === [], 'Named ranking deleted');
+pp_check(is_wp_error(Petit_Popular_Saved::get($ranking_id)), 'Deleted ranking cannot be loaded');
+pp_check(get_post($a) !== null, 'Deleting ranking does not delete news');
+
 function pp_preview($args, $nonce, $mode = 'demo') {
     $_POST = ['args' => $args, 'nonce' => $nonce, 'mode' => $mode];
     $_REQUEST = $_POST;

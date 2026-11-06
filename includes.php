@@ -54,6 +54,15 @@ final class Petit_Popular_Dates {
             default: throw new InvalidArgumentException('Període d’agenda desconegut.');
         }
     }
+    public static function publication_start($months) {
+        if (!is_scalar($months) || !preg_match('/^\d+$/', (string) $months) || (int) $months < 1 || (int) $months > 120) {
+            throw new InvalidArgumentException('L’antiguitat de les notícies ha de ser entre 1 i 120 mesos.');
+        }
+        $today = self::today();
+        $first = $today->modify('first day of this month')->modify('-' . (int) $months . ' months');
+        $day = min((int) $today->format('j'), (int) $first->format('t'));
+        return $first->setDate((int) $first->format('Y'), (int) $first->format('n'), $day)->format('Y-m-d 00:00:00');
+    }
     public static function score($real, $factor) {
         return (int) round(max(0, (float) $real) * max(0.01, min(1000, (float) $factor)));
     }

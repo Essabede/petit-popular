@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Petit Popular
  * Description: Rànquings de notícies i d'Events Calendar, amb períodes, factors i dissenys per web.
- * Version: 0.2.0
+ * Version: 0.3.0
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Petit
@@ -12,13 +12,16 @@
  */
 if (!defined('ABSPATH')) { exit; }
 require_once __DIR__ . '/includes.php';
+require_once __DIR__ . '/saved.php';
 
 final class Petit_Popular {
-    const VERSION = '0.2.0';
+    const VERSION = '0.3.0';
     const OPTION = 'petit_popular_settings';
 
     public static function boot() {
         add_action('init', [__CLASS__, 'ensure_schema']);
+        add_action('init', ['Petit_Popular_Saved', 'register']);
+        add_action('wp_ajax_petit_popular_saved', ['Petit_Popular_Saved', 'ajax']);
         add_action('admin_enqueue_scripts', [__CLASS__, 'admin_assets']);
         add_action('admin_menu', [__CLASS__, 'menu']);
         add_action('admin_init', [__CLASS__, 'register_settings']);
@@ -55,7 +58,7 @@ final class Petit_Popular {
 
     public static function settings() {
         return wp_parse_args(get_option(self::OPTION, []), [
-            'post_factor' => 1, 'event_factor' => 1,
+            'post_factor' => 1, 'event_factor' => 1, 'news_category' => 'noticies',
             'brand' => 'custom', 'accent' => '#2e9c87', 'radius' => 16, 'gap' => 20,
         ]);
     }
@@ -88,6 +91,11 @@ final class Petit_Popular {
         $old['accent'] = self::brand_color($old['brand']) ?: $old['accent'];
         $old['radius'] = max(0, min(48, (int) ($input['radius'] ?? $old['radius'])));
         $old['gap'] = max(0, min(64, (int) ($input['gap'] ?? $old['gap'])));
+        if (isset($input['news_category']) && is_scalar($input['news_category'])) {
+            $slug = sanitize_title($input['news_category']);
+            if ($slug && get_term_by('slug', $slug, 'category')) { $old['news_category'] = $slug; }
+            else { add_settings_error(self::OPTION, 'news_category', 'Selecciona una categoria de notícies existent.'); }
+        }
         return $old;
     }
 
@@ -144,6 +152,19 @@ final class Petit_Popular {
             $conditions[] = 'v.view_date BETWEEN %s AND %s';
             array_push($values, $visits[0], $visits[1]);
         }
+        if ($type === 'post') {
+            $term = get_term_by('slug', self::settings()['news_category'], 'category');
+            if (!$term) { return []; }
+            $children = get_term_children((int) $term->term_id, 'category');
+            $ids = array_merge([(int) $term->term_id], is_wp_error($children) ? [] : array_map('intval', $children));
+            $conditions[] = "EXISTS (SELECT 1 FROM {$wpdb->term_relationships} nr
+                INNER JOIN {$wpdb->term_taxonomy} nt ON nt.term_taxonomy_id = nr.term_taxonomy_id
+                WHERE nr.object_id = p.ID AND nt.taxonomy = 'category' AND nt.term_id IN (" . implode(',', array_fill(0, count($ids), '%d')) . '))';
+            array_push($values, ...$ids);
+            $conditions[] = 'p.post_date >= %s AND p.post_date <= %s';
+            $values[] = Petit_Popular_Dates::publication_start($args['post_months'] ?? 6);
+            $values[] = current_datetime()->format('Y-m-d H:i:s');
+        }
         if ($type === 'tribe_events') {
             if (!function_exists('tribe_get_events')) { throw new InvalidArgumentException('Cal activar The Events Calendar per mostrar esdeveniments.'); }
             $window = Petit_Popular_Dates::events($args['event_period'], $args['event_days'], $args['event_from'], $args['event_to']);
@@ -188,11 +209,16 @@ final class Petit_Popular {
     public static function defaults() {
         return ['type' => 'posts', 'period' => '7d', 'days' => 7, 'from' => '', 'to' => '',
             'event_period' => 'next', 'event_days' => 14, 'event_from' => '', 'event_to' => '', 'ongoing' => 'yes',
-            'category' => '', 'limit' => 5, 'layout' => 'cards', 'columns' => 3, 'image_position' => 'side',
+            'post_months' => 6, 'category' => '', 'limit' => 5, 'layout' => 'cards', 'columns' => 3, 'image_position' => 'side',
             'show_count' => 'no', 'show_excerpt' => 'no', 'title' => '', 'accent' => '', 'radius' => '', 'gap' => '', 'font' => 'theme', 'title_size' => 20, 'brand' => 'site'];
     }
 
     public static function shortcode($atts = []) {
+        if (is_array($atts) && array_key_exists('id', $atts)) {
+            $saved = Petit_Popular_Saved::get(absint($atts['id']));
+            if (is_wp_error($saved)) { return current_user_can('manage_options') ? '<p class="pp-notice">' . esc_html($saved->get_error_message()) . '</p>' : ''; }
+            $atts = $saved['args'];
+        }
         $a = shortcode_atts(self::defaults(), $atts, 'petit_popular');
         try {
             if (!in_array($a['type'], ['posts', 'events'], true)) { throw new InvalidArgumentException('Tipus de contingut no vàlid.'); }
@@ -243,7 +269,7 @@ final class Petit_Popular {
                             ? tribe_get_start_date($id, false, 'Y-m-d') : get_the_date('Y-m-d', $id));
                         ?>
                         <p class="pp-meta"><time datetime="<?php echo esc_attr($machine_date); ?>"><?php echo esc_html($date); ?></time></p>
-                        <?php if ($a['show_count'] === 'yes') : ?><span class="pp-score"><?php echo esc_html(number_format_i18n(Petit_Popular_Dates::score($row->real_views, $factor))); ?> punts de popularitat</span><?php endif; ?>
+                        <?php if ($a['show_count'] === 'yes') : ?><span class="pp-score"><?php echo esc_html(number_format_i18n(Petit_Popular_Dates::score($row->real_views, $factor))); ?> visualitzacions</span><?php endif; ?>
                     </div>
                 </article></li>
             <?php endforeach; ?>
@@ -292,6 +318,11 @@ final class Petit_Popular {
         <form action="options.php" method="post">
         <?php settings_fields('petit_popular'); ?>
         <table class="form-table" role="presentation">
+        <tr><th><label for="pp-news-category">Categoria de notícies</label></th><td><select id="pp-news-category" name="<?php echo esc_attr(self::OPTION); ?>[news_category]">
+        <?php $terms = get_terms(['taxonomy' => 'category', 'hide_empty' => false]); ?>
+        <option value="">Selecciona la categoria de notícies</option>
+        <?php foreach (is_wp_error($terms) ? [] : $terms as $term) : ?><option value="<?php echo esc_attr($term->slug); ?>" <?php selected($s['news_category'], $term->slug); ?>><?php echo esc_html($term->name); ?></option><?php endforeach; ?>
+        </select><p class="description">Els rànquings de notícies només inclouen aquesta categoria i les seves subcategories.</p></td></tr>
         <tr><th><label for="pp-site-brand">Identitat del mitjà</label></th><td><select id="pp-site-brand" name="<?php echo esc_attr(self::OPTION); ?>[brand]">
         <?php foreach (['custom' => 'Personalitzat', 'sabadell' => 'Petit Sabadell · verd #2E9C87', 'terrassa' => 'Petit Terrassa · corall #FC634F'] as $value => $label) : ?>
         <option value="<?php echo esc_attr($value); ?>" <?php selected($s['brand'], $value); ?>><?php echo esc_html($label); ?></option>
@@ -302,12 +333,17 @@ final class Petit_Popular {
         <?php endforeach; ?>
         <tr><th><label for="pp-site-accent">Color d’accent</label></th><td><input id="pp-site-accent" type="color" name="<?php echo esc_attr(self::OPTION); ?>[accent]" value="<?php echo esc_attr($s['accent']); ?>"></td></tr>
         </table>
-        <p>El factor s’aplica només a la sortida pública del plugin. L’ordre depèn de les visites reals. Els recomptes ajustats s’etiqueten com a punts de popularitat.</p>
+        <p>El factor s’aplica només a la sortida pública del plugin. L’ordre depèn de les visites reals. La xifra pública de visualitzacions incorpora el factor configurat; les visites reals es conserven internament.</p>
         <?php submit_button(); ?></form></details>
-        <h2>Crea el teu rànquing</h2>
+        <h2>Els teus rànquings</h2>
+        <?php if (!get_term_by('slug', $s['news_category'], 'category')) : ?><div class="notice notice-warning inline"><p>Selecciona i desa la categoria de notícies a «Configuració de la web i multiplicadors». Fins llavors, els rànquings reals de notícies no mostraran resultats.</p></div><?php endif; ?>
+        <div class="pp-library"><label for="pp-saved-select">Rànquings desats</label><select id="pp-saved-select"><option value="">Tria un rànquing</option></select><button type="button" id="pp-load" class="button">Obre</button><button type="button" id="pp-new" class="button">Nou rànquing</button><button type="button" id="pp-delete" class="button">Elimina</button>
+        <details><summary>Recupera un shortcode anterior</summary><label for="pp-import-code">Enganxa el codi complet</label><textarea id="pp-import-code" rows="3"></textarea><button type="button" id="pp-import" class="button">Recupera les opcions</button><p>Un codi antic es pot editar i desar amb nom. Per rebre els canvis futurs cal substituir-lo pel nou codi amb ID.</p></details><p id="pp-library-status" role="status" aria-live="polite"></p></div>
+        <h2>Crea o edita el rànquing</h2>
         <p>Tria el contingut, el període i el disseny. Veuràs el resultat a la dreta abans d’inserir-lo a la web.</p>
         <div id="pp-builder" class="pp-workspace"><div class="pp-controls"><fieldset class="pp-control-group"><legend>1. Contingut i dates</legend>
         <?php self::select('type', 'Contingut', ['posts' => 'Notícies', 'events' => 'Esdeveniments']); ?>
+        <?php self::input('post_months', 'Notícies publicades en els últims X mesos', 'number', '6'); ?>
         <?php self::select('period', 'Visites rebudes durant', ['7d' => 'Últims 7 dies', '30d' => 'Últims 30 dies', 'today' => 'Avui', 'week' => 'Aquesta setmana', 'month' => 'Aquest mes', 'days' => 'Últims X dies', 'custom' => 'Entre dues dates', 'all' => 'Tot l’històric']); ?>
         <?php self::input('days', 'X dies de visites', 'number', '7'); self::input('from', 'Visites des de', 'date'); self::input('to', 'Visites fins a', 'date'); ?>
         <?php self::select('event_period', 'Celebració dels esdeveniments', ['next' => 'Pròxims X dies', 'today' => 'Avui', 'weekend' => 'Aquest cap de setmana', 'month' => 'Aquest mes', 'custom' => 'Entre dues dates', 'all' => 'Sense filtre']); ?>
@@ -316,12 +352,12 @@ final class Petit_Popular {
         </fieldset><fieldset class="pp-control-group"><legend>2. Disseny</legend>
         <?php self::select('layout', 'Disseny', ['cards' => 'Targetes', 'list' => 'Llista amb imatges', 'hero' => 'Primer destacat', 'vertical' => 'Rànquing vertical']); ?>
         <?php self::select('image_position', 'Imatge al rànquing vertical', ['side' => 'Al costat del text (compacte)', 'top' => 'Al damunt del text (targetes apilades)']); ?>
-        <?php self::select('show_count', 'Mostrar punts', ['no' => 'No', 'yes' => 'Sí']); ?>
+        <?php self::select('show_count', 'Mostrar visualitzacions', ['no' => 'No', 'yes' => 'Sí']); ?>
         <?php self::select('brand', 'Identitat d’aquest rànquing', ['site' => 'La configurada a la web', 'sabadell' => 'Petit Sabadell', 'terrassa' => 'Petit Terrassa']); ?>
         <?php self::select('font', 'Tipografia', ['theme' => 'La del tema', 'serif' => 'Editorial (Georgia)', 'sans' => 'Sense serifa (Arial)', 'nunito' => 'Nunito (si està instal·lada al tema)']); ?>
         <?php self::input('title_size', 'Mida dels titulars (14–48 px)', 'number', '20'); self::input('accent', 'Color propi (opcional, #hex)'); self::input('radius', 'Arrodoniment propi (opcional, px)', 'number'); self::input('gap', 'Espaiat propi (opcional, px)', 'number'); ?>
         <?php self::input('title', 'Títol del rànquing'); self::input('category', 'Slug de categoria (opcional)'); self::input('limit', 'Nombre d’elements (1–24)', 'number', '5'); self::input('columns', 'Columnes (1–4)', 'number', '3'); ?>
-        </fieldset><div class="pp-insert"><h3>3. Insereix-lo a WordPress</h3><p>Copia el codi i enganxa’l en un bloc «Shortcode» de la pàgina o del widget.</p>
+        </fieldset><div class="pp-insert"><h3>3. Desa’l i insereix-lo a WordPress</h3><label for="pp-ranking-name">Nom intern del rànquing</label><input id="pp-ranking-name" type="text" maxlength="160" placeholder="Rànquing de la portada"><button type="button" id="pp-save" class="button button-primary">Desa el rànquing</button><p id="pp-save-status" role="status"></p><p>Copia el codi i enganxa’l en un bloc «Shortcode» de la pàgina o del widget.</p>
         <label for="pp-code" class="screen-reader-text">Codi del rànquing</label><textarea readonly id="pp-code" rows="4"></textarea>
         <button type="button" id="pp-copy" class="button button-primary">Copia el codi</button><span id="pp-copy-status" role="status"></span></div></div>
         <div class="pp-preview-panel"><div class="pp-preview-toolbar"><h3>Previsualització</h3>
@@ -353,7 +389,7 @@ final class Petit_Popular {
         wp_enqueue_script('petit-popular-builder', plugins_url('assets/builder.js', __FILE__), [], self::VERSION, true);
         wp_localize_script('petit-popular-builder', 'PetitPopularBuilder', [
             'url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('petit_popular_preview'),
-            'styles' => plugins_url('assets/popular.css', __FILE__),
+            'styles' => plugins_url('assets/popular.css', __FILE__), 'defaults' => self::defaults(), 'saved' => Petit_Popular_Saved::listing(),
         ]);
     }
 

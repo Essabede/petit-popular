@@ -18,6 +18,77 @@
   const frame = document.getElementById('pp-preview-frame');
   const status = document.getElementById('pp-preview-status');
   const config = window.PetitPopularBuilder;
+  let savedId = 0;
+  let savedSnapshot = '';
+  const nameInput = document.getElementById('pp-ranking-name');
+  const libraryStatus = document.getElementById('pp-library-status');
+  const saveStatus = document.getElementById('pp-save-status');
+  const savedSelect = document.getElementById('pp-saved-select');
+  const copyButton = document.getElementById('pp-copy');
+  const snapshot = () => JSON.stringify([nameInput.value, ...fields.map(el => el.value)]);
+  function fillLibrary(items) {
+    savedSelect.replaceChildren(new Option('Tria un rànquing', ''));
+    for (const item of items || []) savedSelect.add(new Option(item.name, String(item.id)));
+    savedSelect.value = savedId ? String(savedId) : '';
+  }
+  async function manage(operation, extra = {}) {
+    if (!config) throw new Error('Recarrega la pàgina per continuar.');
+    const body = new URLSearchParams({ action: 'petit_popular_saved', nonce: config.nonce, operation });
+    for (const [key, value] of Object.entries(extra)) body.set(key, value);
+    if (operation === 'save') for (const [key, value] of Object.entries(activeArgs())) body.set(`args[${key}]`, value);
+    const response = await fetch(config.url, { method: 'POST', credentials: 'same-origin', body });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.data?.message || 'No s’ha pogut completar l’operació.');
+    return result.data;
+  }
+  function populate(ranking) {
+    savedId = Number(ranking.id) || 0;
+    nameInput.value = ranking.name || '';
+    for (const el of fields) el.value = String(ranking.args?.[el.dataset.pp] ?? config?.defaults?.[el.dataset.pp] ?? '');
+    savedSnapshot = snapshot();
+    savedSelect.value = savedId ? String(savedId) : '';
+    update();
+  }
+  // Prevent edits during a pending save/load from being silently overwritten.
+  async function libraryAction(button, action) {
+    const controls = [...root.querySelectorAll('input,select,button,textarea'), ...document.querySelectorAll('.pp-library input,.pp-library select,.pp-library button,.pp-library textarea')];
+    const previous = controls.map(el => el.disabled);
+    controls.forEach(el => { el.disabled = true; });
+    let errorMessage = '';
+    try { await action(); }
+    catch (error) { errorMessage = error.message; libraryStatus.textContent = errorMessage; }
+    finally { controls.forEach((el, i) => { el.disabled = previous[i]; }); update(); if (errorMessage) saveStatus.textContent = errorMessage; }
+  }
+  fillLibrary(config?.saved || []);
+  document.getElementById('pp-save').addEventListener('click', event => libraryAction(event.currentTarget, async () => {
+    libraryStatus.textContent = '';
+    const result = await manage('save', { id: String(savedId), name: nameInput.value });
+    populate(result.ranking); fillLibrary(result.saved);
+    libraryStatus.textContent = 'Rànquing desat. El codi amb ID reflectirà les edicions que desis.';
+  }));
+  document.getElementById('pp-load').addEventListener('click', event => libraryAction(event.currentTarget, async () => {
+    if (!savedSelect.value) throw new Error('Tria un rànquing de la llista.');
+    populate(await manage('load', { id: savedSelect.value }));
+    libraryStatus.textContent = 'Rànquing recuperat. Ja el pots editar.';
+  }));
+  document.getElementById('pp-new').addEventListener('click', () => {
+    populate({ id: 0, name: '', args: config?.defaults || {} });
+    libraryStatus.textContent = 'Nou rànquing. Escriu un nom i desa’l.';
+  });
+  document.getElementById('pp-import').addEventListener('click', event => libraryAction(event.currentTarget, async () => {
+    populate(await manage('import', { code: document.getElementById('pp-import-code').value }));
+    libraryStatus.textContent = savedId ? 'Rànquing recuperat pel seu ID.' : 'Opcions recuperades. Posa-hi un nom i desa’l; després substitueix el codi antic pel nou codi amb ID.';
+  }));
+  document.getElementById('pp-delete').addEventListener('click', event => {
+    if (!savedSelect.value) { libraryStatus.textContent = 'Tria un rànquing de la llista.'; return; }
+    if (!window.confirm('Vols eliminar aquest rànquing? Els shortcodes amb aquest ID deixaran de mostrar-lo.')) return;
+    libraryAction(event.currentTarget, async () => {
+      const id = Number(savedSelect.value);
+      const result = await manage('delete', { id: String(id) });
+      if (id === savedId) populate({ id: 0, name: '', args: config?.defaults || {} });
+      fillLibrary(result.saved); libraryStatus.textContent = 'Rànquing eliminat.';
+    });
+  });
   const layout = root.querySelector('[data-pp="layout"]');
   const tiles = document.createElement('div');
   tiles.className = 'pp-layout-choices';
@@ -83,6 +154,7 @@
     for (const el of fields) {
       const k = el.dataset.pp;
       let visible = true;
+      if (k === 'post_months') visible = values.type === 'posts';
       if (k === 'image_position') visible = values.layout === 'vertical';
       if (k === 'columns') visible = !['vertical', 'list'].includes(values.layout);
       if (k === 'days') visible = values.period === 'days';
@@ -93,7 +165,11 @@
       el.closest('p').hidden = !visible;
     }
     tiles.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.layout === values.layout)));
-    code.value = '[petit_popular ' + Object.entries(activeArgs()).map(([key, value]) => `${key}="${value}"`).join(' ') + ']';
+    const inlineCode = '[petit_popular ' + Object.entries(activeArgs()).map(([key, value]) => `${key}="${value}"`).join(' ') + ']';
+    code.value = savedId ? `[petit_popular id="${savedId}"]` : inlineCode;
+    const dirty = savedId && snapshot() !== savedSnapshot;
+    copyButton.disabled = Boolean(dirty);
+    saveStatus.textContent = dirty ? 'Canvis pendents: desa’ls per actualitzar el rànquing publicat.' : (savedId ? 'Codi estable: pots editar aquest rànquing sense canviar-lo a les pàgines.' : 'Desa el rànquing amb un nom per recuperar-lo més endavant.');
     document.getElementById('pp-copy-status').textContent = '';
     frame.style.width = document.getElementById('pp-preview-width').value;
     clearTimeout(timer);
