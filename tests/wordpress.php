@@ -101,7 +101,7 @@ foreach (['cards', 'list', 'hero', 'vertical', 'plain'] as $no_image_layout) {
     pp_check(strpos($without, 'class="pp-rank"') !== false && strpos($without, '--pp-rank-size:40px') !== false, 'Prominent ranking preserved without photo for ' . $no_image_layout);
 }
 
-$plain = Petit_Popular::shortcode(['layout' => 'plain', 'show_image' => 'no', 'title_color' => '#123456', 'date_color' => '#654321']);
+$plain = Petit_Popular::shortcode(['layout' => 'plain', 'show_image' => 'no', 'title_color' => '#123456', 'date_color' => '#654321', 'hover_color' => '#e3708f', 'density' => 'tight']);
 pp_check(strpos($plain, 'pp-plain') !== false && strpos($plain, 'class="pp-image"') === false, 'Plain editorial list renders without photos');
 pp_check(strpos($plain, '--pp-title-color:#123456') !== false && strpos($plain, '--pp-date-color:#654321') !== false, 'Title and date colors applied independently');
 $unsafe_color = Petit_Popular::shortcode(['title_color' => 'red;position:fixed', 'date_color' => 'url(evil)']);
@@ -143,13 +143,14 @@ function pp_saved($data) {
 }
 wp_set_current_user(1);
 $manage_nonce = wp_create_nonce('petit_popular_preview');
-$save = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'name' => 'Rànquing de la portada', 'args' => ['layout' => 'vertical', 'title' => 'L’actualitat "del dia"', 'show_image' => 'no', 'rank_size' => 40, 'radius' => 9, 'gap' => 13, 'title_color' => '#123456', 'date_color' => '#654321']]);
+$save = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'name' => 'Rànquing de la portada', 'args' => ['layout' => 'vertical', 'title' => 'L’actualitat "del dia"', 'show_image' => 'no', 'rank_size' => 40, 'radius' => 9, 'gap' => 13, 'title_color' => '#123456', 'date_color' => '#654321', 'hover_color' => '#e3708f', 'density' => 'tight']]);
 pp_check($save['success'], 'Named ranking saved');
 $ranking_id = $save['data']['ranking']['id'];
 pp_check($ranking_id > 0 && get_post_type($ranking_id) === Petit_Popular_Saved::TYPE, 'Ranking stored as private post type');
 pp_check(count($save['data']['saved']) === 1, 'Named ranking listed');
 pp_check($save['data']['ranking']['args']['show_image'] === 'no' && (int) $save['data']['ranking']['args']['rank_size'] === 40, 'Photo visibility and rank size persist in named ranking');
 $saved_html = Petit_Popular::shortcode(['id' => $ranking_id]);
+pp_check(strpos($saved_html, '--pp-hover-color:#e3708f') !== false && strpos($saved_html, 'pp-density-tight') !== false, 'Saved ranking retains hover color and density');
 pp_check(strpos($saved_html, '--pp-title-color:#123456') !== false && strpos($saved_html, '--pp-date-color:#654321') !== false, 'Saved ranking preserves text colors');
 pp_check(strpos($saved_html, 'pp-vertical') !== false && strpos($saved_html, 'L’actualitat &quot;del dia&quot;') !== false, 'Stable shortcode renders saved options and preserves quotes');
 $edited = pp_saved(['operation' => 'save', 'nonce' => $manage_nonce, 'id' => $ranking_id, 'name' => 'Rànquing intern', 'args' => ['layout' => 'plain', 'title' => 'Canvi desat']]);

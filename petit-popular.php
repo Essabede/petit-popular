@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Petit Popular
  * Description: Rànquings de notícies i d'Events Calendar, amb períodes, factors i dissenys per web.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Petit
@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes.php';
 require_once __DIR__ . '/saved.php';
 
 final class Petit_Popular {
-    const VERSION = '0.4.0';
+    const VERSION = '0.4.1';
     const OPTION = 'petit_popular_settings';
 
     public static function boot() {
@@ -253,11 +253,11 @@ final class Petit_Popular {
         return ['type' => 'posts', 'period' => '7d', 'days' => 7, 'from' => '', 'to' => '',
             'event_period' => 'next', 'event_days' => 14, 'event_from' => '', 'event_to' => '', 'ongoing' => 'yes',
             'post_months' => 6, 'category' => '', 'limit' => 5, 'layout' => 'cards', 'columns' => 3, 'image_position' => 'side',
-            'show_image' => 'yes', 'rank_style' => 'circle', 'rank_weight' => 850, 'rank_color' => '', 'rank_background' => '', 'rank_border' => '', 'rank_size' => 32, 'show_count' => 'no', 'show_excerpt' => 'no', 'title' => '', 'accent' => '', 'radius' => '', 'gap' => '', 'font' => 'theme', 'title_size' => 20, 'title_color' => '', 'date_color' => '', 'brand' => 'site'];
+            'show_image' => 'yes', 'rank_style' => 'circle', 'rank_weight' => 850, 'rank_color' => '', 'rank_background' => '', 'rank_border' => '', 'rank_size' => 32, 'show_count' => 'no', 'show_excerpt' => 'no', 'title' => '', 'accent' => '', 'radius' => '', 'gap' => '', 'font' => 'theme', 'title_size' => 20, 'title_color' => '', 'date_color' => '', 'hover_color' => '', 'density' => 'comfortable', 'brand' => 'site'];
     }
 
     public static function builder_defaults() {
-        return array_merge(self::defaults(), ['rank_style' => 'number', 'rank_size' => 18, 'rank_weight' => 400]);
+        return array_merge(self::defaults(), ['rank_style' => 'number', 'rank_size' => 18, 'rank_weight' => 400, 'density' => 'compact']);
     }
 
     public static function shortcode($atts = []) {
@@ -292,9 +292,11 @@ final class Petit_Popular {
         $rank_size = max(12, min(48, (int) $a['rank_size']));
         $rank_style = in_array($a['rank_style'], ['circle','number','badge','none'], true) ? $a['rank_style'] : 'circle';
         $rank_weight = in_array((int) $a['rank_weight'], [400,500,600,700,800,850], true) ? (int) $a['rank_weight'] : 850;
+        $density = in_array($a['density'], ['comfortable','compact','tight'], true) ? $a['density'] : 'comfortable';
+        $compact_class = $a['show_image'] === 'no' && in_array($layout, ['plain','list','vertical'], true) && $density !== 'comfortable' ? 'pp-compact-list' : '';
         $image_class = $a['show_image'] === 'no' ? 'pp-no-image' : 'pp-with-image';
         $style = "--pp-rank-weight:$rank_weight;--pp-rank-size:{$rank_size}px;--pp-font:$font;--pp-title-size:{$title_size}px;--pp-accent:$accent;--pp-radius:{$radius}px;--pp-gap:{$gap}px;--pp-columns:$columns";
-        foreach (['title_color' => '--pp-title-color', 'date_color' => '--pp-date-color', 'rank_color' => '--pp-rank-color'] as $field => $property) {
+        foreach (['title_color' => '--pp-title-color', 'date_color' => '--pp-date-color', 'hover_color' => '--pp-hover-color', 'rank_color' => '--pp-rank-color'] as $field => $property) {
             $color = sanitize_hex_color($a[$field]);
             if ($color) { $style .= ";$property:$color"; }
         }
@@ -305,7 +307,7 @@ final class Petit_Popular {
         if ($border) { $style .= ';--pp-rank-border:' . $border; }
         ob_start();
         ?>
-        <section class="petit-popular pp-<?php echo esc_attr($layout); ?> pp-image-<?php echo esc_attr($image_position); ?> <?php echo esc_attr($image_class); ?> pp-rank-<?php echo esc_attr($rank_style); ?>" style="<?php echo esc_attr($style); ?>" aria-label="<?php echo esc_attr($a['title'] ?: 'Continguts populars'); ?>">
+        <section class="petit-popular pp-<?php echo esc_attr($layout); ?> pp-image-<?php echo esc_attr($image_position); ?> <?php echo esc_attr($image_class); ?> pp-rank-<?php echo esc_attr($rank_style); ?> pp-density-<?php echo esc_attr($density); ?> <?php echo esc_attr($compact_class); ?>" style="<?php echo esc_attr($style); ?>" aria-label="<?php echo esc_attr($a['title'] ?: 'Continguts populars'); ?>">
             <?php if ($a['title'] !== '') : ?><h2 class="pp-heading"><?php echo esc_html($a['title']); ?></h2><?php endif; ?>
             <ol class="pp-items">
             <?php foreach ($rows as $index => $row) :
@@ -331,8 +333,8 @@ final class Petit_Popular {
                         $machine_date = $demo ? $row->demo_date->format('Y-m-d') : ($is_event && function_exists('tribe_get_start_date')
                             ? tribe_get_start_date($id, false, 'Y-m-d') : get_the_date('Y-m-d', $id));
                         ?>
-                        <p class="pp-meta"><time datetime="<?php echo esc_attr($machine_date); ?>"><?php echo esc_html($date); ?></time></p>
-                        <?php if ($a['show_count'] === 'yes' && isset($row->real_views)) : ?><span class="pp-score"><?php echo esc_html(number_format_i18n(Petit_Popular_Dates::score($row->real_views, $factor))); ?> visualitzacions</span><?php endif; ?>
+                        <div class="pp-details"><p class="pp-meta"><time datetime="<?php echo esc_attr($machine_date); ?>"><?php echo esc_html($date); ?></time></p>
+                        <?php if ($a['show_count'] === 'yes' && isset($row->real_views)) : ?><span class="pp-score"><?php echo esc_html(number_format_i18n(Petit_Popular_Dates::score($row->real_views, $factor))); ?> visualitzacions</span><?php endif; ?></div>
                     </div>
                 </article></li>
             <?php endforeach; ?>
@@ -433,6 +435,7 @@ final class Petit_Popular {
         </fieldset><fieldset class="pp-control-group"><legend>2. Disseny</legend>
         <?php self::select('layout', 'Disseny', ['cards' => 'Targetes', 'list' => 'Llista amb imatges', 'hero' => 'Primer destacat', 'vertical' => 'Rànquing vertical', 'plain' => 'Llistat sense targetes']); ?>
         <?php self::select('show_image', 'Fotografia', ['yes' => 'Amb foto', 'no' => 'Sense foto']); ?>
+        <?php self::select('density', 'Espai dels llistats sense foto', ['compact' => 'Compacte', 'tight' => 'Molt compacte', 'comfortable' => 'Ampli (com fins ara)'], 'En mode compacte la data i les visualitzacions comparteixen línia si hi caben.'); ?>
         <?php self::select('rank_style', 'Com vols mostrar la posició al rànquing?', ['number' => 'Només el número (discret)', 'none' => 'No mostrar números', 'circle' => 'Número dins d’un cercle', 'badge' => 'Número dins d’una etiqueta']); ?>
         <?php self::select('rank_size', 'Mida dels números', ['18' => 'Petita i discreta', '24' => 'Mitjana', '32' => 'Gran', '40' => 'Molt gran']); ?>
         <?php self::select('rank_weight', 'Gruix dels números', ['400' => 'Normal', '500' => 'Mitjà', '700' => 'Negreta', '850' => 'Molt marcat']); ?>
@@ -449,7 +452,7 @@ final class Petit_Popular {
         <?php self::input('title_size', 'Mida dels titulars (px)', 'number', '20'); ?>
         <p><label for="pp-color-mode">Color del rànquing</label><select id="pp-color-mode"><option value="brand">Utilitza el color del mitjà</option><option value="custom">Tria un altre color</option></select></p>
         <p><label for="pp-accent-picker">Tria el color</label><input type="color" id="pp-accent-picker" value="<?php echo esc_attr($s['accent']); ?>"><input type="hidden" id="pp-accent" data-pp="accent" value=""></p>
-        <?php foreach (['title_color' => 'Color dels titulars', 'date_color' => 'Color de les dates'] as $field => $label) : ?>
+        <?php foreach (['title_color' => 'Color dels titulars', 'date_color' => 'Color de les dates', 'hover_color' => 'Color del titular en passar-hi per sobre o enfocar-lo amb el teclat'] as $field => $label) : ?>
         <p><label for="pp-<?php echo esc_attr($field); ?>-mode"><?php echo esc_html($label); ?></label><select id="pp-<?php echo esc_attr($field); ?>-mode"><option value="default">Predeterminat</option><option value="custom">Tria un color</option></select></p>
         <p><label for="pp-<?php echo esc_attr($field); ?>-picker"><?php echo esc_html($label); ?></label><input type="color" id="pp-<?php echo esc_attr($field); ?>-picker" value="<?php echo $field === 'title_color' ? '#20252d' : '#526070'; ?>"><input type="hidden" data-pp="<?php echo esc_attr($field); ?>" id="pp-<?php echo esc_attr($field); ?>" value=""></p>
         <?php endforeach; ?>

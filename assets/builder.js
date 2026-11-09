@@ -65,7 +65,7 @@
       document.getElementById('pp-accent-picker').value = expanded;
       root.querySelector('[data-pp="accent"]').value = document.getElementById('pp-accent-picker').value;
     }
-    for (const key of ['title_color', 'date_color', 'rank_color', 'rank_background', 'rank_border']) {
+    for (const key of ['title_color', 'date_color', 'hover_color', 'rank_color', 'rank_background', 'rank_border']) {
       const el = root.querySelector(`[data-pp="${key}"]`);
       const noColor = (key === 'rank_background' && el.value === 'transparent') || (key === 'rank_border' && el.value === 'none');
       document.getElementById(`pp-${key}-mode`).value = noColor ? 'none' : (el.value ? 'custom' : 'default');
@@ -193,7 +193,7 @@
   function update() {
     const customColor = document.getElementById('pp-color-mode').value === 'custom';
     root.querySelector('[data-pp="accent"]').value = customColor ? document.getElementById('pp-accent-picker').value : '';
-    for (const key of ['title_color', 'date_color', 'rank_color', 'rank_background', 'rank_border']) {
+    for (const key of ['title_color', 'date_color', 'hover_color', 'rank_color', 'rank_background', 'rank_border']) {
       const colorMode = document.getElementById(`pp-${key}-mode`).value;
       root.querySelector(`[data-pp="${key}"]`).value = colorMode === 'custom' ? document.getElementById(`pp-${key}-picker`).value : (colorMode === 'none' ? (key === 'rank_background' ? 'transparent' : 'none') : '');
     }
@@ -222,8 +222,11 @@
       if (k === 'image_position') visible = values.layout === 'vertical' && values.show_image !== 'no';
       if (k === 'accent') visible = customColor;
       if (k === 'columns') visible = !['vertical', 'list', 'plain'].includes(values.layout);
+      const compactList = values.show_image === 'no' && ['plain','list','vertical'].includes(values.layout);
+      if (k === 'density') visible = compactList;
+      if (k === 'gap') visible = !(compactList && values.density !== 'comfortable');
       if (k === 'radius') visible = values.layout !== 'plain';
-      if (['title_color', 'date_color', 'rank_color', 'rank_background', 'rank_border'].includes(k)) visible = document.getElementById(`pp-${k}-mode`).value === 'custom';
+      if (['title_color', 'date_color', 'hover_color', 'rank_color', 'rank_background', 'rank_border'].includes(k)) visible = document.getElementById(`pp-${k}-mode`).value === 'custom';
       if (['rank_size', 'rank_weight'].includes(k)) visible = values.rank_style !== 'none';
       if (['rank_color', 'rank_background', 'rank_border'].includes(k)) visible = visible && values.rank_style !== 'none' && !(values.rank_style === 'number' && k !== 'rank_color');
       if (k === 'ongoing') visible = values.type === 'events' && values.event_period !== 'all';

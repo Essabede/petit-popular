@@ -30,7 +30,7 @@ w.fetch = async (url, options) => {
       data = { ranking, saved: listing() };
     } else if (operation === 'load') data = saved.get(id);
     else if (operation === 'delete') { saved.delete(id); data = { saved: listing() }; }
-    else if (operation === 'import') data = { id: 0, name: '', args: { ...w.PetitPopularBuilder.defaults, layout: 'vertical', period: '30d', title: 'Importat', radius: '11', gap: '19', accent: '#abc', show_image: 'no' } };
+    else if (operation === 'import') data = { id: 0, name: '', args: { ...w.PetitPopularBuilder.defaults, layout: 'vertical', period: '30d', title: 'Importat', density: 'comfortable', radius: '11', gap: '19', accent: '#abc', show_image: 'no' } };
     return { ok: true, json: async () => ({ success: true, data }) };
   }
   return { ok: !fail, json: async () => fail ? { success: false, data: { message: 'Connexió no disponible' } } : { success: true, data: { html: '<section class="petit-popular">Vista nova</section>', diagnostics: mockDiagnostics } } };
@@ -145,5 +145,14 @@ mockDiagnostics = [{title: 'Taller slime', start: '2026-11-12', end: '2026-11-12
 change('pp-preview-mode', 'ranking');
 await pause();
 check(!doc.getElementById('pp-preview-diagnostics').hidden && doc.getElementById('pp-diagnostics-list').textContent.includes('26 visites reals'), 'Calendar diagnostics displayed with real visit context');
+change('pp-layout', 'plain'); change('pp-show_image', 'no'); change('pp-density', 'tight');
+check(!doc.getElementById('pp-density').closest('p').hidden && doc.getElementById('pp-gap').closest('p').hidden, 'Compact list density shown without competing spacing control');
+check(doc.getElementById('pp-code').value.includes('density="tight"'), 'Density serialized in shortcode');
+change('pp-hover_color-mode', 'custom'); change('pp-hover_color-picker', '#e3708f');
+check(doc.getElementById('pp-code').value.includes('hover_color="#e3708f"'), 'Hover color selectable independently');
+change('pp-density', 'comfortable');
+check(!doc.getElementById('pp-gap').closest('p').hidden, 'Legacy spacing control available in comfortable mode');
+change('pp-show_image', 'yes');
+check(doc.getElementById('pp-density').closest('p').hidden, 'No-photo density hidden when photos enabled');
 w.close();
 console.log(`PASS: ${checks} visual builder interaction checks`);

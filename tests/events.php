@@ -65,3 +65,20 @@ pp_check(strpos($light_rank, 'pp-rank-number') !== false && strpos($light_rank, 
 $clear_rank = Petit_Popular::shortcode(['rank_background' => 'transparent', 'rank_border' => 'none']);
 pp_check(strpos($clear_rank, '--pp-rank-bg:transparent') !== false && strpos($clear_rank, '--pp-rank-border:transparent') !== false, 'Rank background and border can be removed');
 pp_check(Petit_Popular::defaults()['rank_style'] === 'circle' && Petit_Popular::builder_defaults()['rank_style'] === 'number', 'Old shortcodes retain circle while new builder uses discreet style');
+$compact_posts = [];
+foreach (['El Parc Taulí transforma en vídeos el programa de suport a famílies amb fills amb TDAH', 'El Festival elPetit creix de Sabadell fins a 14 ciutats amb gairebé un centenar de funcions'] as $i => $headline) {
+    $post_id = wp_insert_post(['post_type' => 'post', 'post_status' => 'publish', 'post_title' => $headline]);
+    wp_set_post_terms($post_id, [get_term_by('slug', 'noticies', 'category')->term_id], 'category');
+    pp_seed($post_id, current_datetime()->format('Y-m-d'), 50 - $i * 5);
+    $compact_posts[] = $post_id;
+}
+$density_args = ['layout' => 'plain', 'show_image' => 'no', 'rank_size' => 16, 'rank_style' => 'circle', 'title_size' => 16, 'show_count' => 'yes', 'date_color' => '#ffffff', 'hover_color' => '#e3708f'];
+foreach (['comfortable','compact','tight'] as $density) {
+    $density_html = Petit_Popular::shortcode(array_merge($density_args, ['density' => $density]));
+    pp_check(strpos($density_html, 'pp-density-' . $density) !== false && strpos($density_html, '--pp-hover-color:#e3708f') !== false, 'Density and hover settings render: ' . $density);
+    file_put_contents(__DIR__ . '/density-' . $density . '-fixture.html', $density_html);
+}
+$not_compact_cards = Petit_Popular::shortcode(['layout' => 'cards', 'show_image' => 'no', 'density' => 'tight']);
+pp_check(strpos($not_compact_cards, 'pp-compact-list') === false, 'Density does not change card layouts');
+pp_check(Petit_Popular::defaults()['density'] === 'comfortable' && Petit_Popular::builder_defaults()['density'] === 'compact', 'Legacy density retained while new builder suggests compact');
+foreach ($compact_posts as $post_id) { wp_delete_post($post_id, true); }

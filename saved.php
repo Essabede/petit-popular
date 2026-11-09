@@ -30,7 +30,7 @@ final class Petit_Popular_Saved {
             }
         }
         $enums = ['type' => ['posts','events'], 'layout' => ['cards','list','vertical','hero','plain'],
-            'rank_style' => ['number','circle','badge','none'],
+            'rank_style' => ['number','circle','badge','none'], 'density' => ['comfortable','compact','tight'],
             'image_position' => ['side','top'], 'show_image' => ['yes','no'], 'show_count' => ['yes','no'], 'ongoing' => ['yes','no'],
             'brand' => ['site','sabadell','terrassa'], 'font' => ['theme','serif','sans','nunito']];
         foreach ($enums as $key => $allowed) {
@@ -45,7 +45,7 @@ final class Petit_Popular_Saved {
                 throw new InvalidArgumentException('Valor fora de rang: ' . $key);
             }
         }
-        foreach (['accent', 'title_color', 'date_color', 'rank_color'] as $field) {
+        foreach (['accent', 'title_color', 'date_color', 'hover_color', 'rank_color'] as $field) {
             if ($args[$field] !== '' && !sanitize_hex_color($args[$field])) { throw new InvalidArgumentException('El color ha de ser hexadecimal.'); }
         }
         if (!preg_match('/^\d+$/', (string) $args['rank_weight']) || !in_array((int) $args['rank_weight'], [400,500,600,700,800,850], true)) { throw new InvalidArgumentException('Gruix dels números no vàlid.'); }

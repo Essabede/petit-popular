@@ -1,13 +1,13 @@
-> **Descarrega el plugin instal·lable:** [petit-popular-0.4.0.zip](dist/petit-popular-0.4.0.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
+> **Descarrega el plugin instal·lable:** [petit-popular-0.4.1.zip](dist/petit-popular-0.4.1.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
 
-# Petit Popular · 0.4.0 (prototip)
+# Petit Popular · 0.4.1 (prototip)
 
 Plugin per a WordPress 6.4+ i PHP 8.0+. Compatible amb activació per web o per xarxa multisite. No modifica WordPress Popular Posts ni importa les seves dades. No requereix cap servei extern.
 
 ## Instal·lació de prova
 
 1. Fes servir primer una còpia de proves del multisite, amb còpia de seguretat.
-2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.4.0.zip`.
+2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.4.1.zip`.
 3. Activa'l a la xarxa o a la web que vulguis provar. Les taules es creen en la primera petició de cada web, incloent les webs creades després de l'activació.
 4. Entra a **Configuració → Petit Popular** de cadascuna de les webs. Defineix els dos factors i l'estil base.
 5. Genera un shortcode amb els selectors i enganxa'l en un bloc Shortcode. Visita una notícia com a lector no editor per començar a recollir dades.
@@ -101,7 +101,7 @@ El ZIP instal·lable exclou els tests.
 
 ## Validació d'aquesta versió
 
-Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 107 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
+Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 113 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
 
 `preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat de les visualitzacions amb dades fictícies.
 
@@ -140,7 +140,7 @@ La previsualització només és accessible a administradors i valida un nonce de
 
 Per actualitzar, puja el ZIP 0.3.1 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
 
-Validació afegida: 50 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 93 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
+Validació afegida: 55 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 93 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
 
 ## Filtres de notícies i biblioteca de rànquings (0.3.0)
 
@@ -226,3 +226,15 @@ Per als rànquings nous, el panell proposa número sol de 18 px i gruix normal. 
 Atributs: `rank_style="none|number|circle|badge"`, `rank_size="12..48"`, `rank_weight="400|500|600|700|800|850"`, `rank_color="#hex"`, `rank_background="#hex|transparent"`, `rank_border="#hex|none"`. Deixar un color buit conserva el predeterminat.
 
 Validació: 107 comprovacions WordPress multisite (incloent el contracte d’esdeveniments), 50 d’interacció del panell, 26 de dates i factors, 6 de seguiment. `tests/browser-smoke.mjs` comprova el formulari i la previsualització en Chromium amb els continguts de prova exportats per WordPress i una resposta HTTP simulada; no es connecta a cap web de producció.
+
+## Color en passar-hi per sobre i llistats més compactes (0.4.1)
+
+El selector **Color del titular en passar-hi per sobre o enfocar-lo amb el teclat** permet personalitzar el color dels enllaços del titular. Tria un color amb el selector visual o deixa «Predeterminat» per conservar el comportament anterior. S’aplica també amb focus de teclat. Atribut: `hover_color="#hex"`.
+
+**Espai dels llistats sense foto** ofereix «Ampli (com fins ara)», «Compacte» i «Molt compacte». Només afecta els dissenys de files (`plain`, `list`, `vertical`) sense fotografia. En els modes compactes es redueixen els marges i l’espai reservat al número; data i visualitzacions comparteixen línia quan hi caben, sense caixa de fons al comptador. Si no hi caben, passen de línia. La mida del titular continua sent la seleccionada. Atribut: `density="comfortable|compact|tight"`.
+
+Els rànquings i els codis existents mantenen el mode ampli. Els rànquings nous al panell proposen el mode compacte quan es tria un llistat sense foto. El control general de separació queda ocult en els modes compactes per evitar dues opcions que controlin el mateix espai.
+
+Prova real de layout en Chromium, amb columna de 300 px i contingut de prova idèntic: alçada de contingut 689,8 px en ampli, 313,8 px en compacte i 257,0 px en molt compacte. S’ha verificat l’alineació de data/comptador i el color tant amb `:hover` com amb `:focus-visible`. Aquestes dimensions són de la prova; el resultat depèn dels titulars, tipografia i configuració de cada web.
+
+Validació de la versió: 113 comprovacions WordPress multisite, 55 d’interacció del panell i la prova de navegador `tests/density-browser.mjs`.
