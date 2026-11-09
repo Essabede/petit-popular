@@ -215,13 +215,14 @@ $real = pp_preview(['show_count' => 'yes'], $preview_nonce, 'ranking');
 pp_check($real['success'] && !$real['data']['demo'] && strpos($real['data']['html'], 'Notícia A') !== false, 'Real preview uses site ranking');
 $unchanged = Petit_Popular::ranked(Petit_Popular::defaults());
 pp_check((int) $unchanged[0]->real_views === 12, 'Preview never adds page views');
+require __DIR__ . '/events.php';
 Petit_Popular::admin_assets('settings_page_petit-popular');
 pp_check(wp_style_is('petit-popular-admin', 'enqueued'), 'Admin stylesheet registered before rendering');
 ob_start();
 Petit_Popular::admin();
 $admin = ob_get_clean();
 file_put_contents(__DIR__ . '/admin-fixture.html', $admin);
-pp_check(strpos($admin, 'Factor de notícies') !== false && strpos($admin, 'pp-builder') !== false, 'Admin settings and builder render');
+pp_check(strpos($admin, 'Multiplica les visualitzacions de notícies per') !== false && strpos($admin, 'pp-builder') !== false, 'Admin settings and builder render');
 pp_check(strpos($admin, 'pp-preview-frame') !== false && strpos($admin, 'pp-copy') !== false, 'Visual preview panel and copy action render');
 file_put_contents(__DIR__ . '/last-run.json', json_encode([
     'checks' => $checks, 'wordpress' => get_bloginfo('version'), 'php' => PHP_VERSION,

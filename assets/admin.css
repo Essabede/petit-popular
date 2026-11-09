@@ -45,3 +45,10 @@
 
 .pp-icon-plain{grid-template-columns:1fr;background:none}
 .pp-icon-plain i{background:linear-gradient(90deg,#2e9c87 8%,transparent 8%,transparent 15%,#a7aaad 15%,#a7aaad 85%,transparent 85%);border-radius:0;border-bottom:1px solid #dcdcde}
+.pp-field-help{display:block;margin-top:6px;font-size:12px;line-height:1.5;color:#50575e}
+.pp-subheading{margin:22px 0 12px;padding-top:16px;border-top:1px solid #dcdcde;font-size:14px}
+.pp-filter-summary{background:#f0f6fc;border-left:3px solid #2271b1;padding:12px;line-height:1.6}
+#pp-preview-diagnostics{font-size:12px;line-height:1.6;margin:16px 0}
+#pp-preview-diagnostics summary{font-weight:600;cursor:pointer}
+#pp-diagnostics-list{list-style:disc;margin-left:18px}
+#pp-event-date-group[hidden]{display:none!important}

@@ -12,7 +12,7 @@ w.PetitPopularBuilder.defaults = Object.fromEntries([...doc.querySelectorAll('[d
 w.PetitPopularBuilder.saved = [];
 let saved = new Map(), nextId = 300;
 w.confirm = () => true;
-let calls = [], clipboard = '', fail = false;
+let calls = [], clipboard = '', fail = false, mockDiagnostics = [];
 Object.defineProperty(w.navigator, 'clipboard', { value: { writeText: async text => { clipboard = text; } } });
 w.fetch = async (url, options) => {
   calls.push({ url, options });
@@ -33,7 +33,7 @@ w.fetch = async (url, options) => {
     else if (operation === 'import') data = { id: 0, name: '', args: { ...w.PetitPopularBuilder.defaults, layout: 'vertical', period: '30d', title: 'Importat', radius: '11', gap: '19', accent: '#abc', show_image: 'no' } };
     return { ok: true, json: async () => ({ success: true, data }) };
   }
-  return { ok: !fail, json: async () => fail ? { success: false, data: { message: 'Connexió no disponible' } } : { success: true, data: { html: '<section class="petit-popular">Vista nova</section>' } } };
+  return { ok: !fail, json: async () => fail ? { success: false, data: { message: 'Connexió no disponible' } } : { success: true, data: { html: '<section class="petit-popular">Vista nova</section>', diagnostics: mockDiagnostics } } };
 };
 const pause = () => new Promise(resolve => setTimeout(resolve, 430));
 let checks = 0;
@@ -125,5 +125,25 @@ change('pp-date_color-picker', '#654321');
 check(doc.getElementById('pp-code').value.includes('title_color="#123456"') && doc.getElementById('pp-code').value.includes('date_color="#654321"'), 'Independent visual text colors included in shortcode');
 change('pp-title_color-mode', 'default');
 check(!doc.getElementById('pp-code').value.includes('title_color=') && doc.getElementById('pp-code').value.includes('date_color='), 'Title default does not reset date color');
+change('pp-type', 'events');
+change('pp-event_days', '30'); change('pp-period', '30d');
+check(!doc.getElementById('pp-event-date-group').hidden && doc.getElementById('pp-filter-summary').textContent.includes('pròxims 30 dies'), 'Event eligibility and views summarized separately');
+check(doc.getElementById('pp-filter-summary').textContent.includes('últims 30 dies'), 'Summary includes visit-count period');
+change('pp-event_period', 'all');
+check(doc.getElementById('pp-ongoing').closest('p').hidden, 'Ongoing choice hidden when no celebration-date restriction');
+change('pp-rank_style', 'none');
+check(doc.getElementById('pp-rank_size').closest('p').hidden && doc.getElementById('pp-code').value.includes('rank_style="none"'), 'Hidden-number mode omits irrelevant controls');
+change('pp-rank_style', 'circle');
+change('pp-rank_background-mode', 'none'); change('pp-rank_border-mode', 'none');
+check(doc.getElementById('pp-code').value.includes('rank_background="transparent"') && doc.getElementById('pp-code').value.includes('rank_border="none"'), 'Clear background and border choices persist in shortcode');
+change('pp-rank_style', 'number'); change('pp-rank_size', '18'); change('pp-rank_weight', '400');
+check(doc.getElementById('pp-code').value.includes('rank_size="18"') && doc.getElementById('pp-code').value.includes('rank_weight="400"'), 'Discreet number settings configurable');
+change('pp-preview-mode', 'content');
+await pause();
+check(calls.at(-1).options.body.get('mode') === 'content' && doc.getElementById('pp-preview-note').textContent.includes('No és un rànquing'), 'Real-content preview explicitly separate from popularity');
+mockDiagnostics = [{title: 'Taller slime', start: '2026-11-12', end: '2026-11-12', views: 26, reason: 'Events Calendar no el retorna'}];
+change('pp-preview-mode', 'ranking');
+await pause();
+check(!doc.getElementById('pp-preview-diagnostics').hidden && doc.getElementById('pp-diagnostics-list').textContent.includes('26 visites reals'), 'Calendar diagnostics displayed with real visit context');
 w.close();
 console.log(`PASS: ${checks} visual builder interaction checks`);

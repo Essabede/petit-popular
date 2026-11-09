@@ -1,13 +1,13 @@
-> **Descarrega el plugin instal·lable:** [petit-popular-0.3.2.zip](dist/petit-popular-0.3.2.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
+> **Descarrega el plugin instal·lable:** [petit-popular-0.4.0.zip](dist/petit-popular-0.4.0.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
 
-# Petit Popular · 0.3.2 (prototip)
+# Petit Popular · 0.4.0 (prototip)
 
 Plugin per a WordPress 6.4+ i PHP 8.0+. Compatible amb activació per web o per xarxa multisite. No modifica WordPress Popular Posts ni importa les seves dades. No requereix cap servei extern.
 
 ## Instal·lació de prova
 
 1. Fes servir primer una còpia de proves del multisite, amb còpia de seguretat.
-2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.3.2.zip`.
+2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.4.0.zip`.
 3. Activa'l a la xarxa o a la web que vulguis provar. Les taules es creen en la primera petició de cada web, incloent les webs creades després de l'activació.
 4. Entra a **Configuració → Petit Popular** de cadascuna de les webs. Defineix els dos factors i l'estil base.
 5. Genera un shortcode amb els selectors i enganxa'l en un bloc Shortcode. Visita una notícia com a lector no editor per començar a recollir dades.
@@ -59,7 +59,7 @@ Dates de visites i de celebració independents:
 | `image_position` | `side` (imatge al costat) o `top` (imatge al damunt), per a `layout="vertical"` |
 | `columns` | 1–4; s'adapta a pantalles petites |
 | `show_image` | `yes` (amb foto, per defecte) o `no` (sense foto) |
-| `rank_size` | Mida dels números, 20–48 px; 32 px per defecte |
+| `rank_size` | Mida dels números, 12–48 px; 32 px per a codis antics i 18 px en crear un rànquing nou al panell |
 | `show_count` | `yes` o `no`; ocult per defecte |
 | `title` | Títol del rànquing |
 | `font` | `theme`, `serif`, `sans` |
@@ -101,7 +101,7 @@ El ZIP instal·lable exclou els tests.
 
 ## Validació d'aquesta versió
 
-Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 93 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
+Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 107 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
 
 `preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat de les visualitzacions amb dades fictícies.
 
@@ -140,7 +140,7 @@ La previsualització només és accessible a administradors i valida un nonce de
 
 Per actualitzar, puja el ZIP 0.3.1 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
 
-Validació afegida: 42 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 93 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
+Validació afegida: 50 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 93 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
 
 ## Filtres de notícies i biblioteca de rànquings (0.3.0)
 
@@ -196,3 +196,33 @@ El nou disseny **Llistat sense targetes** (`layout="plain"`) mostra files separa
 ```
 
 Aquesta actualització conserva les opcions i els rànquings desats. Validació: 93 comprovacions WordPress multisite i 42 d’interacció del panell.
+
+## Formularis, agenda i números configurables (0.4.0)
+
+### Dos períodes diferents
+
+El formulari d’esdeveniments pregunta primer **Quan se celebren els esdeveniments?** i després **Quines visualitzacions comptem?**. Un resum mostra la combinació: per exemple, activitats dels pròxims 30 dies ordenades per les visualitzacions dels últims 30 dies. «Nombre de dies a partir d’avui» inclou avui. «Aquest mes complet» inclou dates ja passades del mes. La categoria es tria per nom en un selector.
+
+El resum final de visites dels últims 7 dies no limita la data de celebració. No és necessàriament el mateix rànquing que s’està configurant.
+
+### Filtratge d’esdeveniments i diagnòstic
+
+S’ha substituït la combinació `start_date` / `end_date` per `date_overlaps` inclusiu de l’API pública de The Events Calendar, amb la zona horària de la web. La primera combinació requereix que l’esdeveniment quedi completament dins de l’interval; podia excloure activitats en curs o que acabessin després de la data final. Es recuperen objectes d’esdeveniment en comptes de dependre només del mode de camps IDs. Es continua respectant el que retorna Events Calendar, incloses possibles exclusions del calendari. No es canvia la visibilitat de cap esdeveniment.
+
+En seleccionar **Rànquing real**, l’apartat **Per què alguns esdeveniments amb visites no apareixen?** compara fins a 10 activitats amb visites dins del període de recompte: mostra el títol, les dates de celebració i si queden fora de les dates, si s’han exclòs els esdeveniments ja iniciats o si Events Calendar no les retorna. El diagnòstic és privat per a administradors.
+
+El cas de prova d’un taller únic del 12/11/2026, amb 26 visites recents i interval de celebració del 09/11 al 08/12, apareix al rànquing. **Això és una prova amb un substitut de l’API basat en el contracte documentat, no una verificació de la instal·lació de producció ni de la llicència Pro.** El motiu exacte de l’absència del taller a la web real s’ha de comprovar amb el nou diagnòstic.
+
+Referències consultades al repositori oficial: `src/Tribe/Query.php` i `src/Tribe/Repositories/Event.php`, incloent `filter_by_date_overlaps` i els àlies de dates.
+
+### Previsualització amb continguts reals sense visites
+
+**Continguts reals per provar el disseny** mostra notícies o activitats publicades que compleixen les dates i la categoria encara que no tinguin visites. No és un rànquing de popularitat i no mostra xifres de visualitzacions. La vista **Rànquing real** continua utilitzant només visites registrades. No es canvia automàticament d’una vista a l’altra ni s’inventen recomptes.
+
+### Números amb menys pes visual
+
+Per als rànquings nous, el panell proposa número sol de 18 px i gruix normal. Es pot triar no mostrar-lo, número sol, cercle o etiqueta; canviar-ne la mida i el gruix; i configurar el color del número, el fons i el contorn, incloent fons transparent i absència de contorn. Els colors són dins d’**Colors dels números** per no sobrecarregar el formulari. Els codis i rànquings antics mantenen cercle, 32 px i gruix marcat fins que es modifiquen.
+
+Atributs: `rank_style="none|number|circle|badge"`, `rank_size="12..48"`, `rank_weight="400|500|600|700|800|850"`, `rank_color="#hex"`, `rank_background="#hex|transparent"`, `rank_border="#hex|none"`. Deixar un color buit conserva el predeterminat.
+
+Validació: 107 comprovacions WordPress multisite (incloent el contracte d’esdeveniments), 50 d’interacció del panell, 26 de dates i factors, 6 de seguiment. `tests/browser-smoke.mjs` comprova el formulari i la previsualització en Chromium amb els continguts de prova exportats per WordPress i una resposta HTTP simulada; no es connecta a cap web de producció.

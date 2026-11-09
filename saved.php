@@ -30,6 +30,7 @@ final class Petit_Popular_Saved {
             }
         }
         $enums = ['type' => ['posts','events'], 'layout' => ['cards','list','vertical','hero','plain'],
+            'rank_style' => ['number','circle','badge','none'],
             'image_position' => ['side','top'], 'show_image' => ['yes','no'], 'show_count' => ['yes','no'], 'ongoing' => ['yes','no'],
             'brand' => ['site','sabadell','terrassa'], 'font' => ['theme','serif','sans','nunito']];
         foreach ($enums as $key => $allowed) {
@@ -38,14 +39,18 @@ final class Petit_Popular_Saved {
         Petit_Popular_Dates::range($args['period'], $args['days'], $args['from'], $args['to']);
         if ($args['type'] === 'posts') { Petit_Popular_Dates::publication_start($args['post_months']); }
         else { Petit_Popular_Dates::events($args['event_period'], $args['event_days'], $args['event_from'], $args['event_to']); }
-        foreach (['limit' => [1,24], 'columns' => [1,4], 'title_size' => [14,48], 'rank_size' => [20,48], 'radius' => [0,48], 'gap' => [0,64]] as $key => $bounds) {
+        foreach (['limit' => [1,24], 'columns' => [1,4], 'title_size' => [14,48], 'rank_size' => [12,48], 'radius' => [0,48], 'gap' => [0,64]] as $key => $bounds) {
             if ($args[$key] === '') { continue; }
             if (!preg_match('/^\d+$/', (string) $args[$key]) || $args[$key] < $bounds[0] || $args[$key] > $bounds[1]) {
                 throw new InvalidArgumentException('Valor fora de rang: ' . $key);
             }
         }
-        foreach (['accent', 'title_color', 'date_color'] as $field) {
+        foreach (['accent', 'title_color', 'date_color', 'rank_color'] as $field) {
             if ($args[$field] !== '' && !sanitize_hex_color($args[$field])) { throw new InvalidArgumentException('El color ha de ser hexadecimal.'); }
+        }
+        if (!preg_match('/^\d+$/', (string) $args['rank_weight']) || !in_array((int) $args['rank_weight'], [400,500,600,700,800,850], true)) { throw new InvalidArgumentException('Gruix dels números no vàlid.'); }
+        foreach (['rank_background' => 'transparent', 'rank_border' => 'none'] as $field => $clear) {
+            if ($args[$field] !== '' && $args[$field] !== $clear && !sanitize_hex_color($args[$field])) { throw new InvalidArgumentException('Color dels números no vàlid.'); }
         }
         return $args;
     }

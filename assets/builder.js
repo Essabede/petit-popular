@@ -18,6 +18,15 @@
   const frame = document.getElementById('pp-preview-frame');
   const status = document.getElementById('pp-preview-status');
   const config = window.PetitPopularBuilder;
+  let categoryType = null;
+  const categoryField = root.querySelector('[data-pp="category"]');
+  function fillCategories(type, value = '') {
+    categoryField.replaceChildren(new Option('Totes les categories permeses', ''));
+    for (const term of config?.categories?.[type] || []) categoryField.add(new Option(term.name, term.slug));
+    if (value && ![...categoryField.options].some(option => option.value === value)) categoryField.add(new Option(`Categoria desada (${value})`, value));
+    categoryField.value = value;
+    categoryType = type;
+  }
   let savedId = 0;
   let savedSnapshot = '';
   const nameInput = document.getElementById('pp-ranking-name');
@@ -46,7 +55,7 @@
     nameInput.value = ranking.name || '';
     for (const el of fields) {
       const value = String(ranking.args?.[el.dataset.pp] ?? config?.defaults?.[el.dataset.pp] ?? '');
-      if (el.tagName === 'SELECT' && ![...el.options].some(option => option.value === value)) el.add(new Option(`Personalitzat (${value} px)`, value));
+      if (el.tagName === 'SELECT' && ![...el.options].some(option => option.value === value)) el.add(new Option(el.dataset.pp === 'category' ? `Categoria desada (${value})` : `Personalitzat (${value} px)`, value));
       el.value = value;
     }
     const customAccent = root.querySelector('[data-pp="accent"]').value;
@@ -56,15 +65,17 @@
       document.getElementById('pp-accent-picker').value = expanded;
       root.querySelector('[data-pp="accent"]').value = document.getElementById('pp-accent-picker').value;
     }
-    for (const key of ['title_color', 'date_color']) {
+    for (const key of ['title_color', 'date_color', 'rank_color', 'rank_background', 'rank_border']) {
       const el = root.querySelector(`[data-pp="${key}"]`);
-      document.getElementById(`pp-${key}-mode`).value = el.value ? 'custom' : 'default';
-      if (el.value) {
+      const noColor = (key === 'rank_background' && el.value === 'transparent') || (key === 'rank_border' && el.value === 'none');
+      document.getElementById(`pp-${key}-mode`).value = noColor ? 'none' : (el.value ? 'custom' : 'default');
+      if (el.value && !noColor) {
         const hex = /^#[0-9a-f]{3}$/i.test(el.value) ? '#' + [...el.value.slice(1)].map(c => c + c).join('') : el.value;
         document.getElementById(`pp-${key}-picker`).value = hex;
         el.value = document.getElementById(`pp-${key}-picker`).value;
       }
     }
+    fillCategories(root.querySelector('[data-pp="type"]').value, categoryField.value);
     savedSnapshot = snapshot();
     savedSelect.value = savedId ? String(savedId) : '';
     update();
@@ -128,12 +139,13 @@
     tiles.appendChild(button);
   }
   layout.closest('p').appendChild(tiles);
-  layout.classList.add('screen-reader-text');
+  layout.hidden = true;
+  layout.closest('p').querySelector('label')?.removeAttribute('for');
   let timer;
   let request;
   let generation = 0;
   function activeArgs() {
-    return Object.fromEntries(fields.filter(el => !el.closest('p').hidden && el.value !== '')
+    return Object.fromEntries(fields.filter(el => (!el.closest('p').hidden || (['rank_background', 'rank_border'].includes(el.dataset.pp) && document.getElementById(`pp-${el.dataset.pp}-mode`).value === 'none' && !document.getElementById(`pp-${el.dataset.pp}-mode`).closest('p').hidden)) && el.value !== '')
       .map(el => [el.dataset.pp, el.value.replace(/["\[\]<>]/g, '')]));
   }
   async function preview() {
@@ -146,7 +158,7 @@
     const mode = document.getElementById('pp-preview-mode').value;
     document.getElementById('pp-preview-note').textContent = mode === 'demo'
       ? 'Mostra amb textos, imatges i xifres fictícies. Els filtres temporals s’apliquen al rànquing real.'
-      : 'Continguts de la web amb visites dins dels filtres seleccionats. Aquesta vista no afegeix visites.';
+      : (mode === 'content' ? 'Continguts reals segons les dates i la categoria. No és un rànquing de popularitat: no utilitza visites ni mostra xifres de visualitzacions.' : 'Continguts de la web amb visites dins dels filtres seleccionats. Aquesta vista no afegeix visites.');
     const body = new URLSearchParams({ action: 'petit_popular_preview', nonce: config.nonce, mode });
     for (const [key, value] of Object.entries(activeArgs())) body.set(`args[${key}]`, value);
     try {
@@ -159,6 +171,15 @@
       frame.srcdoc = '<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         + style.outerHTML + '<style>body{margin:0;padding:16px;font-family:system-ui,sans-serif;color:#20252d}*{box-sizing:border-box}a{pointer-events:none}</style></head><body>'
         + result.data.html + '</body></html>';
+      const diagnostics = result.data.diagnostics || [];
+      document.getElementById('pp-preview-diagnostics').hidden = !diagnostics.length;
+      const list = document.getElementById('pp-diagnostics-list');
+      list.replaceChildren();
+      for (const item of diagnostics) {
+        const li = document.createElement('li');
+        li.textContent = `${item.title} — celebració: ${item.start}${item.end !== item.start ? ' a ' + item.end : ''}; ${item.views} visites reals en el període de recompte. ${item.reason}`;
+        list.appendChild(li);
+      }
       status.textContent = 'Previsualització actualitzada.';
     } catch (error) {
       if (error.name !== 'AbortError' && current === generation) {
@@ -172,10 +193,28 @@
   function update() {
     const customColor = document.getElementById('pp-color-mode').value === 'custom';
     root.querySelector('[data-pp="accent"]').value = customColor ? document.getElementById('pp-accent-picker').value : '';
-    for (const key of ['title_color', 'date_color']) {
-      root.querySelector(`[data-pp="${key}"]`).value = document.getElementById(`pp-${key}-mode`).value === 'custom' ? document.getElementById(`pp-${key}-picker`).value : '';
+    for (const key of ['title_color', 'date_color', 'rank_color', 'rank_background', 'rank_border']) {
+      const colorMode = document.getElementById(`pp-${key}-mode`).value;
+      root.querySelector(`[data-pp="${key}"]`).value = colorMode === 'custom' ? document.getElementById(`pp-${key}-picker`).value : (colorMode === 'none' ? (key === 'rank_background' ? 'transparent' : 'none') : '');
     }
     const values = Object.fromEntries(fields.map(el => [el.dataset.pp, el.value]));
+    if (categoryType !== values.type) fillCategories(values.type, categoryType === null ? categoryField.value : '');
+    document.getElementById('pp-event-date-group').hidden = values.type !== 'events';
+    const categoryHelp = categoryField.closest('p').querySelector('.pp-field-help');
+    if (categoryHelp) categoryHelp.textContent = values.type === 'events' ? 'Filtra per la categoria de l’activitat o deixa totes les categories permeses.' : 'Aquest filtre només restringeix més la categoria de notícies configurada a la web.';
+    document.getElementById('pp-eligible-heading').textContent = values.type === 'events' ? 'Quines activitats poden aparèixer?' : 'Quines notícies poden aparèixer?';
+    const periodLabel = document.getElementById('pp-period').selectedOptions[0]?.textContent || '';
+    let eligible;
+    if (values.type === 'events') {
+      eligible = values.event_period === 'next' ? `celebració durant els pròxims ${values.event_days} dies, inclòs avui` : (values.event_period === 'custom' ? `celebració entre ${values.event_from || '(tria la data inicial)'} i ${values.event_to || '(tria la data final)'}` : document.getElementById('pp-event_period').selectedOptions[0]?.textContent);
+    } else { eligible = `notícies publicades en els últims ${values.post_months} mesos`; }
+    document.getElementById('pp-filter-summary').textContent = `Mostrar: ${eligible}. Ordenar segons les visualitzacions rebudes durant: ${periodLabel.toLocaleLowerCase('ca')}.`;
+    document.getElementById('pp-preview-diagnostics').hidden = true;
+    document.getElementById('pp-rank-colors').hidden = values.rank_style === 'none';
+    for (const key of ['rank_color', 'rank_background', 'rank_border']) {
+      const hidden = values.rank_style === 'none' || (values.rank_style === 'number' && key !== 'rank_color');
+      document.getElementById(`pp-${key}-mode`).closest('p').hidden = hidden;
+    }
     for (const el of fields) {
       const k = el.dataset.pp;
       let visible = true;
@@ -184,10 +223,13 @@
       if (k === 'accent') visible = customColor;
       if (k === 'columns') visible = !['vertical', 'list', 'plain'].includes(values.layout);
       if (k === 'radius') visible = values.layout !== 'plain';
-      if (['title_color', 'date_color'].includes(k)) visible = document.getElementById(`pp-${k}-mode`).value === 'custom';
+      if (['title_color', 'date_color', 'rank_color', 'rank_background', 'rank_border'].includes(k)) visible = document.getElementById(`pp-${k}-mode`).value === 'custom';
+      if (['rank_size', 'rank_weight'].includes(k)) visible = values.rank_style !== 'none';
+      if (['rank_color', 'rank_background', 'rank_border'].includes(k)) visible = visible && values.rank_style !== 'none' && !(values.rank_style === 'number' && k !== 'rank_color');
+      if (k === 'ongoing') visible = values.type === 'events' && values.event_period !== 'all';
       if (k === 'days') visible = values.period === 'days';
       if (['from', 'to'].includes(k)) visible = values.period === 'custom';
-      if (['event_period', 'ongoing'].includes(k)) visible = values.type === 'events';
+      if (k === 'event_period') visible = values.type === 'events';
       if (k === 'event_days') visible = values.type === 'events' && values.event_period === 'next';
       if (['event_from', 'event_to'].includes(k)) visible = values.type === 'events' && values.event_period === 'custom';
       el.closest('p').hidden = !visible;
