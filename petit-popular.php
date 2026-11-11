@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Petit Popular
  * Description: Rànquings de notícies i d'Events Calendar, amb períodes, factors i dissenys per web.
- * Version: 0.5.0
+ * Version: 0.5.1
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Petit
@@ -16,7 +16,7 @@ require_once __DIR__ . '/saved.php';
 require_once __DIR__ . '/email.php';
 
 final class Petit_Popular {
-    const VERSION = '0.5.0';
+    const VERSION = '0.5.1';
     const OPTION = 'petit_popular_settings';
 
     public static function boot() {
@@ -467,6 +467,9 @@ final class Petit_Popular {
         <section class="pp-email-export"><h3>4. Exporta el rànquing a Mailchimp</h3>
         <p>Es generen les dades reals del moment amb els filtres actuals, encara que la vista de la dreta sigui de mostra. L’HTML queda fix i no s’actualitza després d’enviar-lo.</p>
         <p><label for="pp-email-layout">Disseny per al correu</label><select id="pp-email-layout"><option value="cards">Targetes horitzontals</option><option value="same">El mateix disseny que a la web</option><option value="list">Llistat amb imatge lateral</option><option value="vertical">Rànquing vertical</option><option value="hero">Primer destacat</option><option value="plain">Llistat sense targetes</option></select></p>
+        <p><label for="pp-email-font">Tipus de lletra del rànquing al correu</label><select id="pp-email-font">
+        <?php foreach (Petit_Popular_Email::FONT_LABELS as $value => $label) : ?><option value="<?php echo esc_attr($value); ?>"><?php echo esc_html($label); ?></option><?php endforeach; ?></select>
+        <span class="pp-field-help">Només afecta el correu. Si el lector no admet una font com Nunito, Open Sans o Lato, utilitzarà Arial.</span></p><p>El bloc exportat reserva 18 píxels a dreta i esquerra dins de l’amplada de 600 píxels.</p>
         <p><label for="pp-email-background">Color de fons al correu</label><input type="color" id="pp-email-background" value="#ffffff"> <button type="button" id="pp-email-brand-background" class="button">Utilitza el color del rànquing</button><span class="pp-field-help">El fons de la pàgina web no s’exporta automàticament. Si utilitzes lletres blanques, tria un fons que permeti llegir-les.</span></p>
         <p id="pp-email-columns-wrap"><label for="pp-email-columns">Columnes horitzontals</label><select id="pp-email-columns"><option value="2">2 columnes</option><option value="3">3 columnes</option><option value="1">1 columna</option></select></p>
         <button type="button" id="pp-email-generate" class="button button-primary">Genera l’HTML del moment</button>

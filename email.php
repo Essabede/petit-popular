@@ -6,6 +6,17 @@ final class Petit_Popular_Email {
     const LABELS = ['cards' => 'Targetes horitzontals', 'list' => 'Llistat amb imatge lateral',
         'vertical' => 'Rànquing vertical', 'hero' => 'Primer destacat', 'plain' => 'Llistat sense targetes'];
 
+    const FONT_LABELS = ['same' => 'La del rànquing web (amb alternativa per a correu)',
+        'arial' => 'Arial', 'helvetica' => 'Helvetica', 'verdana' => 'Verdana',
+        'tahoma' => 'Tahoma', 'trebuchet' => 'Trebuchet MS', 'georgia' => 'Georgia',
+        'times' => 'Times New Roman', 'nunito' => 'Nunito (alternativa: Arial)',
+        'opensans' => 'Open Sans (alternativa: Arial)', 'lato' => 'Lato (alternativa: Arial)'];
+    const FONTS = ['arial' => 'Arial,Helvetica,sans-serif', 'helvetica' => 'Helvetica,Arial,sans-serif',
+        'verdana' => 'Verdana,Geneva,sans-serif', 'tahoma' => 'Tahoma,Verdana,sans-serif',
+        'trebuchet' => 'Trebuchet MS,Arial,sans-serif', 'georgia' => 'Georgia,Times New Roman,serif',
+        'times' => 'Times New Roman,Times,serif', 'nunito' => 'Nunito,Arial,Helvetica,sans-serif',
+        'opensans' => 'Open Sans,Arial,Helvetica,sans-serif', 'lato' => 'Lato,Arial,Helvetica,sans-serif'];
+
     public static function ajax() {
         if (!current_user_can('manage_options')) { wp_send_json_error(['message' => 'Accés restringit.'], 403); }
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { wp_send_json_error(['message' => 'Cal una petició POST.'], 405); }
@@ -20,11 +31,13 @@ final class Petit_Popular_Email {
             if (!is_scalar($columns) || !in_array((string) $columns, ['1','2','3'], true)) { throw new InvalidArgumentException('Tria entre 1 i 3 columnes.'); }
             $background = isset($_POST['background']) && is_string($_POST['background']) ? sanitize_hex_color($_POST['background']) : '#ffffff';
             if (!$background) { throw new InvalidArgumentException('Tria un color de fons vàlid.'); }
+            $email_font = isset($_POST['email_font']) && is_string($_POST['email_font']) ? $_POST['email_font'] : 'same';
+            if (!isset(self::FONT_LABELS[$email_font])) { throw new InvalidArgumentException('Tria una tipografia de correu vàlida.'); }
             $rows = Petit_Popular::ranked($args);
             if (!$rows) { throw new InvalidArgumentException('No hi ha continguts amb visites que compleixin els filtres. L’exportació només utilitza el rànquing real.'); }
-            $html = self::render($args, $rows, $layout, (int) $columns, $background);
+            $html = self::render($args, $rows, $layout, (int) $columns, $background, $email_font);
             wp_send_json_success(['html' => $html, 'count' => count($rows), 'layout' => self::LABELS[$layout],
-                'generated_at' => current_datetime()->format('d/m/Y H:i'),
+                'font_label' => self::FONT_LABELS[$email_font], 'generated_at' => current_datetime()->format('d/m/Y H:i'),
                 'filename' => 'petit-popular-' . current_datetime()->format('Ymd-His') . '.html']);
         } catch (InvalidArgumentException $e) { wp_send_json_error(['message' => $e->getMessage()], 400); }
     }
@@ -37,16 +50,18 @@ final class Petit_Popular_Email {
         return esc_url_raw($url, ['http', 'https']);
     }
 
-    public static function render($a, $rows, $layout = 'cards', $columns = 2, $background = '#ffffff') {
+    public static function render($a, $rows, $layout = 'cards', $columns = 2, $background = '#ffffff', $email_font = 'same') {
         if (!isset(self::LABELS[$layout]) || $columns < 1 || $columns > 3) { throw new InvalidArgumentException('Disseny de correu no vàlid.'); }
         if (!sanitize_hex_color($background)) { throw new InvalidArgumentException('Color de fons no vàlid.'); }
+        if (!isset(self::FONT_LABELS[$email_font])) { throw new InvalidArgumentException('Tipografia de correu no vàlida.'); }
+        if ($email_font === 'same') { $email_font = ['serif' => 'georgia', 'nunito' => 'nunito'][$a['font']] ?? 'arial'; }
         $a['layout'] = $layout;
         $settings = Petit_Popular::settings();
         $theme = ['background' => $background,
             'accent' => sanitize_hex_color($a['accent']) ?: (Petit_Popular::brand_color($a['brand']) ?: $settings['accent']),
             'title' => sanitize_hex_color($a['title_color']) ?: '#20252d',
             'date' => sanitize_hex_color($a['date_color']) ?: '#526070',
-            'font' => $a['font'] === 'serif' ? 'Georgia,Times New Roman,serif' : 'Arial,Helvetica,sans-serif',
+            'font' => self::FONTS[$email_font], 'content_width' => 564,
             'size' => max(14, min(48, (int) $a['title_size'])),
             'radius' => $a['radius'] === '' ? (int) $settings['radius'] : max(0, min(48, (int) $a['radius'])),
             'gap' => $a['gap'] === '' ? (int) $settings['gap'] : max(0, min(32, (int) $a['gap'])),
@@ -67,12 +82,13 @@ final class Petit_Popular_Email {
         $font = esc_attr($theme['font']);
         $html = '<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;"><tr><td align="center" bgcolor="' . esc_attr($background) . '" style="padding:0;background-color:' . esc_attr($background) . ';">';
         $html .= '<table role="presentation" width="600" border="0" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;border-collapse:collapse;font-family:' . $font . ';">';
+        $html .= '<tr><td style="padding:0 18px;"><table role="presentation" width="564" border="0" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-family:' . $font . ';">';
         if ($a['title'] !== '') {
             $html .= '<tr><td style="padding:0 0 16px;color:' . esc_attr($theme['title']) . ';font-family:' . $font . ';font-size:24px;line-height:1.25;font-weight:bold;">' . esc_html($a['title']) . '</td></tr>';
         }
         if ($layout === 'hero') {
             $lead = array_shift($items);
-            $html .= '<tr><td style="padding:0 0 16px;">' . self::card($lead, $a, $theme, 600, true) . '</td></tr>';
+            $html .= '<tr><td style="padding:0 0 16px;">' . self::card($lead, $a, $theme, $theme['content_width'], true) . '</td></tr>';
         }
         if (in_array($layout, ['cards','hero'], true)) {
             $html .= '<tr><td style="padding:0;">' . self::grid($items, $a, $theme, $columns) . '</td></tr>';
@@ -85,12 +101,12 @@ final class Petit_Popular_Email {
                 $html .= '<tr><td style="padding:' . $gap . 'px 0;' . $border . '">' . self::row($item, $a, $theme, $plain) . '</td></tr>';
             }
         }
-        return $html . '</table></td></tr></table>';
+        return $html . '</table></td></tr></table></td></tr></table>';
     }
 
     private static function grid($items, $a, $t, $columns) {
         $out = '<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse;">';
-        $width = (int) floor((600 - ($columns - 1) * 16) / $columns);
+        $width = (int) floor(($t['content_width'] - ($columns - 1) * 16) / $columns);
         foreach (array_chunk($items, $columns) as $chunk) {
             $out .= '<tr>';
             for ($i = 0; $i < $columns; $i++) {
@@ -118,7 +134,7 @@ final class Petit_Popular_Email {
     }
 
     private static function row($item, $a, $t, $plain) {
-        if ($a['layout'] === 'vertical' && $a['image_position'] === 'top' && !$plain) { return self::card($item, $a, $t, 600); }
+        if ($a['layout'] === 'vertical' && $a['image_position'] === 'top' && !$plain) { return self::card($item, $a, $t, $t['content_width']); }
         $style = 'width:100%;border-collapse:separate;' . ($plain ? '' : 'background-color:' . $t['background'] . ';border:1px solid #e3e6e9;border-radius:' . $t['radius'] . 'px;');
         $pad = $plain ? 0 : 12;
         $out = '<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="' . esc_attr($style) . '"><tr>';

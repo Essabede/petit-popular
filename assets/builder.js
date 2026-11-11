@@ -69,7 +69,7 @@
     button.disabled = true;
     emailStatus.textContent = 'Generant el rànquing real per al correu…';
     const body = new URLSearchParams({ action: 'petit_popular_email', nonce: config.emailNonce,
-      background: document.getElementById('pp-email-background').value, layout: document.getElementById('pp-email-layout').value, columns: document.getElementById('pp-email-columns').value });
+      email_font: document.getElementById('pp-email-font').value, background: document.getElementById('pp-email-background').value, layout: document.getElementById('pp-email-layout').value, columns: document.getElementById('pp-email-columns').value });
     for (const [key, value] of Object.entries(activeArgs())) body.set(`args[${key}]`, value);
     try {
       const response = await fetch(config.url, { method: 'POST', credentials: 'same-origin', body });
@@ -80,7 +80,7 @@
       emailCode.value = emailSnapshot.html;
       document.getElementById('pp-email-result').hidden = false;
       emailButtons.forEach(control => { control.disabled = false; });
-      const note = `${emailSnapshot.count} continguts · ${emailSnapshot.layout} · dades del ${emailSnapshot.generated_at}`;
+      const note = `${emailSnapshot.count} continguts · ${emailSnapshot.layout}${emailSnapshot.font_label ? ' · ' + emailSnapshot.font_label : ''} · dades del ${emailSnapshot.generated_at}`;
       emailStatus.textContent = note;
       document.getElementById('pp-email-snapshot-note').textContent = note + '. Regenera l’HTML si vols actualitzar les dades.';
       emailFrame.srcdoc = '<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:10px;font-family:Arial,sans-serif}a{pointer-events:none}</style></head><body>' + emailSnapshot.html + '</body></html>';

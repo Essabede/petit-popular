@@ -160,11 +160,13 @@ check(!doc.getElementById('pp-gap').closest('p').hidden, 'Legacy spacing control
 change('pp-show_image', 'yes');
 check(doc.getElementById('pp-density').closest('p').hidden, 'No-photo density hidden when photos enabled');
 change('pp-preview-mode', 'demo');
-change('pp-email-layout', 'cards'); change('pp-email-columns', '3'); change('pp-email-background', '#2e9c87');
+change('pp-email-layout', 'cards'); change('pp-email-font', 'georgia'); change('pp-email-columns', '3'); change('pp-email-background', '#2e9c87');
 doc.getElementById('pp-email-generate').click();
 await new Promise(resolve => setTimeout(resolve, 30));
+check(!doc.getElementById('pp-code').value.includes('email_font='), 'Email typography does not leak into web shortcode');
 const mailRequest = calls.filter(call => call.options.body.get('action') === 'petit_popular_email').at(-1);
 check(mailRequest.options.body.get('nonce') === 'email-test-nonce' && mailRequest.options.body.get('layout') === 'cards' && mailRequest.options.body.get('columns') === '3', 'Email export sends dedicated nonce and independent design');
+check(mailRequest.options.body.get('email_font') === 'georgia', 'Independent email font sent to exporter');
 check(mailRequest.options.body.get('background') === '#2e9c87' && !mailRequest.options.body.has('mode'), 'Email export requests real data independently of demo preview');
 check(doc.getElementById('pp-email-code').value === mailHtml && !doc.getElementById('pp-email-result').hidden, 'Frozen HTML available after export');
 check(doc.getElementById('pp-email-dialog').open && doc.getElementById('pp-email-frame').srcdoc.includes('Notícia real exportada'), 'Dedicated mail preview opens');

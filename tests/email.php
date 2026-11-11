@@ -22,7 +22,7 @@ $email_html = $email_response['data']['html'];
 file_put_contents(__DIR__ . '/email-horizontal-fixture.html', $email_html);
 pp_check(strpos($email_html, 'Notícia A') !== false && strpos($email_html, '48 visualitzacions') !== false, 'Snapshot contains current titles and multiplied counts');
 pp_check(strpos($email_html, 'bgcolor="#2e9c87"') !== false && strpos($email_html, 'color:#ffffff') !== false, 'Email background can preserve readability of custom date color');
-pp_check(strpos($email_html, '<table role="presentation"') !== false && strpos($email_html, 'width="292"') !== false, 'Horizontal design uses two email table columns');
+pp_check(strpos($email_html, '<table role="presentation"') !== false && strpos($email_html, 'width="274"') !== false, 'Horizontal design uses two email table columns');
 pp_check(strpos($email_html, '<img') === false, 'No-photo preference preserved in email');
 foreach (['<script', '<style', '<iframe', 'display:grid', 'display:flex', 'position:absolute', 'var(', 'class=', 'javascript:', '#ff00ff', 'petit_popular_track'] as $forbidden) {
     pp_check(strpos($email_html, $forbidden) === false, 'Email fragment is standalone and does not include ' . $forbidden);
@@ -58,3 +58,12 @@ set_post_thumbnail($a, $attachment);
 $photo_export = pp_email(array_merge($email_request, ['args' => array_merge($email_args, ['show_image' => 'yes'])]));
 pp_check($photo_export['success'] && preg_match('/<img src="https?:\/\//', $photo_export['data']['html']), 'Email photos use absolute web URLs');
 delete_post_thumbnail($a); wp_delete_attachment($attachment, true);
+
+pp_check(strpos($email_html, 'padding:0 18px;') !== false && strpos($email_html, 'width="564"') !== false, 'Email reserves 18px on each side inside 600px');
+$font_export = pp_email(array_merge($email_request, ['email_font' => 'georgia']));
+pp_check($font_export['success'] && strpos($font_export['data']['html'], 'font-family:Georgia,Times New Roman,serif') !== false, 'Email font can be chosen independently of web font');
+pp_check($font_export['data']['font_label'] === 'Georgia' && $email_args['font'] === 'theme', 'Chosen email font is described and does not change web options');
+$nunito_export = pp_email(array_merge($email_request, ['email_font' => 'nunito']));
+pp_check($nunito_export['success'] && strpos($nunito_export['data']['html'], 'Nunito,Arial,Helvetica,sans-serif') !== false && strpos($nunito_export['data']['html'], '<link') === false, 'Nunito export has safe fallback without remote font dependencies');
+pp_check(!pp_email(array_merge($email_request, ['email_font' => 'Arial;position:fixed']))['success'], 'Arbitrary font CSS rejected');
+file_put_contents(__DIR__ . '/email-georgia-fixture.html', $font_export['data']['html']);

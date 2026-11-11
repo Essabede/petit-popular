@@ -16,17 +16,24 @@ try {
  const evaluate=async expression=>(await send('Runtime.evaluate',{expression,returnByValue:true})).result.value;
  await send('Page.enable');await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
  const admin=readFileSync(root+'/tests/admin-fixture.html','utf8');const css=readFileSync(root+'/assets/admin.css','utf8');
- const mail=readFileSync(root+'/tests/email-horizontal-fixture.html','utf8');const popular=readFileSync(root+'/assets/popular.css','utf8');
+ const mail=readFileSync(root+'/tests/email-georgia-fixture.html','utf8');const popular=readFileSync(root+'/assets/popular.css','utf8');
  const page='<!doctype html><html><head><style>body{margin:24px;font:14px Arial;background:#f0f0f1}select,input,button{font:inherit;padding:7px}.button{border:1px solid #8c8f94;background:white;border-radius:4px}'+css+'</style></head><body>'+admin+'</body></html>';
  await evaluate(`document.open();document.write(${JSON.stringify(page)});document.close();`);
  const setup=`window.PetitPopularBuilder={url:'/test-only',nonce:'test-only',emailNonce:'email-test-only',styles:'data:text/css,'+encodeURIComponent(${JSON.stringify(popular)}),defaults:Object.fromEntries([...document.querySelectorAll('[data-pp]')].map(e=>[e.dataset.pp,e.value])),saved:[],categories:{posts:[],events:[]}};window.fetch=async(url,opts)=>({ok:true,json:async()=>({success:true,data:opts.body.get('action')==='petit_popular_email'?{html:${JSON.stringify(mail)},count:2,layout:'Targetes horitzontals',generated_at:'11/11/2026 12:00',filename:'petit-popular-test.html'}:{html:'<p>Vista de prova</p>',diagnostics:[]}})});`;
  await evaluate(setup+readFileSync(root+'/assets/builder.js','utf8'));
  await evaluate("document.getElementById('pp-email-generate').click()");await new Promise(r=>setTimeout(r,700));
- const state=await evaluate("(()=>{const dialog=document.getElementById('pp-email-dialog'),frame=document.getElementById('pp-email-frame'),doc=frame.contentDocument;const cells=[...doc.querySelectorAll('td[width=\"292\"]')];return {open:dialog.open,horizontal:dialog.scrollWidth>dialog.clientWidth,width:doc.querySelector('table[width=\"600\"]').getBoundingClientRect().width,cells:cells.map(c=>({x:c.getBoundingClientRect().x,y:c.getBoundingClientRect().y})),text:doc.body.textContent,html:document.getElementById('pp-email-code').value};})()");
- if(!state.open||state.horizontal||state.width>601||state.cells.length!==2||state.cells[0].y!==state.cells[1].y||!state.text.includes('Notícia A')||state.html.includes('<script'))throw Error('Unexpected mail preview: '+JSON.stringify(state));
+ const state=await evaluate(`(()=>{
+   const dialog=document.getElementById('pp-email-dialog'),frame=document.getElementById('pp-email-frame'),doc=frame.contentDocument;
+   const cells=[...doc.querySelectorAll('td[width="274"]')];
+   const canvas=doc.querySelector('table[width="600"]').getBoundingClientRect(),content=doc.querySelector('table[width="564"]').getBoundingClientRect();
+   return {insetLeft:content.left-canvas.left,insetRight:canvas.right-content.right,font:doc.defaultView.getComputedStyle(doc.querySelector('a')).fontFamily,
+     open:dialog.open,horizontal:dialog.scrollWidth>dialog.clientWidth,width:canvas.width,
+     cells:cells.map(c=>({x:c.getBoundingClientRect().x,y:c.getBoundingClientRect().y})),text:doc.body.textContent,html:document.getElementById('pp-email-code').value};
+ })()`);
+ if(Math.abs(state.insetLeft-18)>1||Math.abs(state.insetRight-18)>1||!state.font.includes('Georgia')||!state.open||state.horizontal||state.width>601||state.cells.length!==2||state.cells[0].y!==state.cells[1].y||!state.text.includes('Notícia A')||state.html.includes('<script'))throw Error('Unexpected mail preview: '+JSON.stringify(state));
  const image=await send('Page.captureScreenshot',{format:'png'});writeFileSync(root+'/tests/email-browser.png',Buffer.from(image.data,'base64'));
  await evaluate("document.getElementById('pp-email-close').click();document.getElementById('pp-title').value='Nou títol';document.getElementById('pp-title').dispatchEvent(new Event('input',{bubbles:true}));");
  const stale=await evaluate("document.getElementById('pp-email-code').value===''&&document.getElementById('pp-email-copy').disabled&&!document.getElementById('pp-email-dialog').open");
  if(!stale)throw Error('Stale snapshot still available');
- console.log('PASS: actual email HTML in horizontal two-column preview, dialog and stale-snapshot invalidation');console.log(JSON.stringify({width:state.width,columns:state.cells.length}));ws.close();
+ console.log('PASS: actual email HTML in horizontal two-column preview, dialog and stale-snapshot invalidation');console.log(JSON.stringify({width:state.width,columns:state.cells.length,insetLeft:state.insetLeft,insetRight:state.insetRight,font:state.font}));ws.close();
 }finally{chrome.kill('SIGTERM')}
