@@ -217,6 +217,7 @@ pp_check($real['success'] && !$real['data']['demo'] && strpos($real['data']['htm
 $unchanged = Petit_Popular::ranked(Petit_Popular::defaults());
 pp_check((int) $unchanged[0]->real_views === 12, 'Preview never adds page views');
 require __DIR__ . '/events.php';
+require __DIR__ . '/email.php';
 Petit_Popular::admin_assets('settings_page_petit-popular');
 pp_check(wp_style_is('petit-popular-admin', 'enqueued'), 'Admin stylesheet registered before rendering');
 ob_start();

@@ -52,3 +52,13 @@
 #pp-preview-diagnostics summary{font-weight:600;cursor:pointer}
 #pp-diagnostics-list{list-style:disc;margin-left:18px}
 #pp-event-date-group[hidden]{display:none!important}
+.pp-email-export{background:#fff;border:1px solid #dcdcde;border-radius:12px;padding:18px;margin-bottom:18px}
+.pp-email-export h3{margin-top:0}
+.pp-email-export p{line-height:1.5}
+#pp-email-code{width:100%;font-family:monospace;font-size:12px;margin:8px 0 12px;resize:vertical}
+#pp-email-dialog{width:680px;max-width:calc(100vw - 48px);max-height:90vh;padding:20px;border:1px solid #8c8f94;border-radius:12px;box-sizing:border-box;overflow:auto}
+#pp-email-dialog::backdrop{background:#0008}
+.pp-email-dialog-bar{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#pp-email-frame{display:block;width:100%;box-sizing:border-box;height:560px;max-height:65vh;border:1px solid #dcdcde;background:white;margin:12px 0}
+#pp-email-snapshot-note,#pp-email-status{font-size:12px;line-height:1.5}
+.pp-email-export{grid-column:1/-1}

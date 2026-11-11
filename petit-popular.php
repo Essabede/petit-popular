@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Petit Popular
  * Description: Rànquings de notícies i d'Events Calendar, amb períodes, factors i dissenys per web.
- * Version: 0.4.1
+ * Version: 0.5.0
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: Petit
@@ -13,9 +13,10 @@
 if (!defined('ABSPATH')) { exit; }
 require_once __DIR__ . '/includes.php';
 require_once __DIR__ . '/saved.php';
+require_once __DIR__ . '/email.php';
 
 final class Petit_Popular {
-    const VERSION = '0.4.1';
+    const VERSION = '0.5.0';
     const OPTION = 'petit_popular_settings';
 
     public static function boot() {
@@ -26,6 +27,7 @@ final class Petit_Popular {
         add_action('admin_menu', [__CLASS__, 'menu']);
         add_action('admin_init', [__CLASS__, 'register_settings']);
         add_action('wp_enqueue_scripts', [__CLASS__, 'assets']);
+        add_action('wp_ajax_petit_popular_email', ['Petit_Popular_Email', 'ajax']);
         add_action('wp_ajax_petit_popular_preview', [__CLASS__, 'preview']);
         add_action('wp_ajax_petit_popular_view', [__CLASS__, 'track']);
         add_action('wp_ajax_nopriv_petit_popular_view', [__CLASS__, 'track']);
@@ -461,7 +463,18 @@ final class Petit_Popular {
         <?php self::input('title', 'Títol del rànquing');  self::input('limit', 'Nombre d’elements (1–24)', 'number', '5'); self::input('columns', 'Columnes (1–4)', 'number', '3'); ?>
         </fieldset><div class="pp-insert"><h3>3. Desa’l i insereix-lo a WordPress</h3><label for="pp-ranking-name">Nom intern del rànquing</label><input id="pp-ranking-name" type="text" maxlength="160" placeholder="Rànquing de la portada"><button type="button" id="pp-save" class="button button-primary">Desa el rànquing</button><p id="pp-save-status" role="status"></p><p>Copia el codi i enganxa’l en un bloc «Shortcode» de la pàgina o del widget.</p>
         <label for="pp-code" class="screen-reader-text">Codi del rànquing</label><textarea readonly id="pp-code" rows="4"></textarea>
-        <button type="button" id="pp-copy" class="button button-primary">Copia el codi</button><span id="pp-copy-status" role="status"></span></div></div>
+        <button type="button" id="pp-copy" class="button button-primary">Copia el codi</button><span id="pp-copy-status" role="status"></span></div>
+        <section class="pp-email-export"><h3>4. Exporta el rànquing a Mailchimp</h3>
+        <p>Es generen les dades reals del moment amb els filtres actuals, encara que la vista de la dreta sigui de mostra. L’HTML queda fix i no s’actualitza després d’enviar-lo.</p>
+        <p><label for="pp-email-layout">Disseny per al correu</label><select id="pp-email-layout"><option value="cards">Targetes horitzontals</option><option value="same">El mateix disseny que a la web</option><option value="list">Llistat amb imatge lateral</option><option value="vertical">Rànquing vertical</option><option value="hero">Primer destacat</option><option value="plain">Llistat sense targetes</option></select></p>
+        <p><label for="pp-email-background">Color de fons al correu</label><input type="color" id="pp-email-background" value="#ffffff"> <button type="button" id="pp-email-brand-background" class="button">Utilitza el color del rànquing</button><span class="pp-field-help">El fons de la pàgina web no s’exporta automàticament. Si utilitzes lletres blanques, tria un fons que permeti llegir-les.</span></p>
+        <p id="pp-email-columns-wrap"><label for="pp-email-columns">Columnes horitzontals</label><select id="pp-email-columns"><option value="2">2 columnes</option><option value="3">3 columnes</option><option value="1">1 columna</option></select></p>
+        <button type="button" id="pp-email-generate" class="button button-primary">Genera l’HTML del moment</button>
+        <p id="pp-email-status" role="status" aria-live="polite"></p>
+        <div id="pp-email-result" hidden><label for="pp-email-code">HTML per al bloc «Codi» de Mailchimp</label><textarea id="pp-email-code" readonly rows="6"></textarea>
+        <button type="button" id="pp-email-review" class="button">Revisa el correu</button> <button type="button" id="pp-email-copy" class="button" disabled>Copia l’HTML per a Mailchimp</button> <button type="button" id="pp-email-download" class="button" disabled>Descarrega l’HTML</button>
+        <p>Enganxa’l en un bloc «Codi» de Mailchimp. Revisa’l en una tramesa de prova: el tipus de lletra i alguns acabats poden variar segons el lector de correu.</p>
+        <dialog id="pp-email-dialog" aria-labelledby="pp-email-dialog-title" aria-describedby="pp-email-snapshot-note"><div class="pp-email-dialog-bar"><strong id="pp-email-dialog-title">Previsualització del correu</strong><button type="button" id="pp-email-close" class="button">Tanca</button></div><p id="pp-email-snapshot-note"></p><iframe id="pp-email-frame" title="Previsualització de l’HTML per a correu" sandbox="allow-same-origin"></iframe><button type="button" id="pp-email-copy-preview" class="button button-primary" disabled>Copia l’HTML per a Mailchimp</button><p id="pp-email-copy-status" role="status"></p></dialog></div></section></div>
         <div class="pp-preview-panel"><div class="pp-preview-toolbar"><h3>Previsualització</h3>
         <label for="pp-preview-mode">Continguts</label><select id="pp-preview-mode"><option value="demo">Mostra d’estil</option><option value="ranking">Rànquing real (segons les visites)</option><option value="content">Continguts reals per provar el disseny</option></select>
         <label for="pp-preview-width">Amplada</label><select id="pp-preview-width"><option value="100%">Completa</option><option value="340px">Barra lateral</option></select></div>
@@ -497,7 +510,7 @@ final class Petit_Popular {
         wp_enqueue_style('petit-popular-admin', plugins_url('assets/admin.css', __FILE__), [], self::VERSION);
         wp_enqueue_script('petit-popular-builder', plugins_url('assets/builder.js', __FILE__), [], self::VERSION, true);
         wp_localize_script('petit-popular-builder', 'PetitPopularBuilder', [
-            'url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('petit_popular_preview'),
+            'url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('petit_popular_preview'), 'emailNonce' => wp_create_nonce('petit_popular_email'), 'siteAccent' => self::settings()['accent'],
             'styles' => plugins_url('assets/popular.css', __FILE__), 'defaults' => self::builder_defaults(), 'saved' => Petit_Popular_Saved::listing(),
             'categories' => ['posts' => self::category_options('category'), 'events' => self::category_options('tribe_events_cat')],
         ]);

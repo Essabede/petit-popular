@@ -1,13 +1,13 @@
-> **Descarrega el plugin instal·lable:** [petit-popular-0.4.1.zip](dist/petit-popular-0.4.1.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
+> **Descarrega el plugin instal·lable:** [petit-popular-0.5.0.zip](dist/petit-popular-0.5.0.zip). Obre el fitxer i prem el botó de descàrrega de GitHub.
 
-# Petit Popular · 0.4.1 (prototip)
+# Petit Popular · 0.5.0 (prototip)
 
 Plugin per a WordPress 6.4+ i PHP 8.0+. Compatible amb activació per web o per xarxa multisite. No modifica WordPress Popular Posts ni importa les seves dades. No requereix cap servei extern.
 
 ## Instal·lació de prova
 
 1. Fes servir primer una còpia de proves del multisite, amb còpia de seguretat.
-2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.4.1.zip`.
+2. A **Plugins → Afegeix un plugin → Puja un plugin**, puja `petit-popular-0.5.0.zip`.
 3. Activa'l a la xarxa o a la web que vulguis provar. Les taules es creen en la primera petició de cada web, incloent les webs creades després de l'activació.
 4. Entra a **Configuració → Petit Popular** de cadascuna de les webs. Defineix els dos factors i l'estil base.
 5. Genera un shortcode amb els selectors i enganxa'l en un bloc Shortcode. Visita una notícia com a lector no editor per començar a recollir dades.
@@ -101,7 +101,7 @@ El ZIP instal·lable exclou els tests.
 
 ## Validació d'aquesta versió
 
-Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 113 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
+Comprovacions executades: 26 de dates i factors, 6 de seguiment al navegador simulat i 149 d'integració amb WordPress 6.8 multisite / PHP 8.0.30 (WordPress Playground, SQLite). Totes han passat. S'han comprovat el recompte real, l'endpoint públic, les restriccions d'accés, els quatre renderitzats, el formulari d'administració i la separació entre webs. Aquesta prova no substitueix la verificació amb MySQL/MariaDB, el tema del mitjà i Events Calendar Pro de producció.
 
 `preview.html` permet comparar els quatre dissenys i canviar color, tipografia, arrodoniment i visibilitat de les visualitzacions amb dades fictícies.
 
@@ -140,7 +140,7 @@ La previsualització només és accessible a administradors i valida un nonce de
 
 Per actualitzar, puja el ZIP 0.3.1 des de l’administració de la xarxa i selecciona **Substitueix l’actual per la versió pujada**. No cal desinstal·lar el plugin. Les opcions, els shortcodes i l’històric es conserven.
 
-Validació afegida: 55 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 93 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
+Validació afegida: 67 comprovacions d’interacció del panell amb JSDOM 26.1.0, a més de les 93 comprovacions WordPress multisite. `tests/builder.mjs` utilitza el formulari generat per les proves WordPress (`tests/admin-fixture.html`, ignorat per Git). Instal·la JSDOM en un directori de proves i defineix `PETIT_TEST_TOOLS` apuntant-hi per executar-lo.
 
 ## Filtres de notícies i biblioteca de rànquings (0.3.0)
 
@@ -238,3 +238,36 @@ Els rànquings i els codis existents mantenen el mode ampli. Els rànquings nous
 Prova real de layout en Chromium, amb columna de 300 px i contingut de prova idèntic: alçada de contingut 689,8 px en ampli, 313,8 px en compacte i 257,0 px en molt compacte. S’ha verificat l’alineació de data/comptador i el color tant amb `:hover` com amb `:focus-visible`. Aquestes dimensions són de la prova; el resultat depèn dels titulars, tipografia i configuració de cada web.
 
 Validació de la versió: 113 comprovacions WordPress multisite, 55 d’interacció del panell i la prova de navegador `tests/density-browser.mjs`.
+
+## HTML del rànquing per a Mailchimp (0.5.0)
+
+A **4. Exporta el rànquing a Mailchimp** pots escollir un disseny del plugin independentment del que utilitzes a la web. El valor inicial és **Targetes horitzontals**, amb dues columnes; també permet una o tres columnes, llistat lateral, vertical, primer destacat i llistat sense targetes. «El mateix disseny que a la web» reutilitza el disseny seleccionat al formulari.
+
+### Ús
+
+1. Recupera un rànquing desat o configura els filtres i les opcions del rànquing que vols enviar. No cal desar els canvis per exportar les opcions actuals.
+2. Tria el disseny del correu i, si és horitzontal, el nombre de columnes. Aquest selector no modifica el disseny desat de la web.
+3. Tria **Color de fons al correu**. El fons de la pàgina web no es pot deduir del rànquing. «Utilitza el color del rànquing» facilita conservar lletres blanques sobre un fons corporatiu.
+4. Prem **Genera l’HTML del moment**. S’obre una previsualització específica del correu, amb la data de generació.
+5. Prem **Copia l’HTML per a Mailchimp** i enganxa’l en un bloc **Codi / Code** del constructor de la campanya. El botó copia el fragment de taules HTML, no el shortcode de WordPress.
+6. També pots **Descarregar l’HTML** per obrir-lo al navegador o utilitzar-lo com a fitxer. El fitxer descarregat inclou una estructura de document UTF-8; el fragment copiat al porta-retalls és adequat per al bloc Codi.
+
+### Dades del moment
+
+L’exportació sempre consulta el **rànquing real**, encara que la previsualització de la web estigui en mode de mostra o de continguts sense visites. Si no hi ha resultats amb visites dins dels filtres, s’explica l’error i no s’exporten dades fictícies.
+
+Es congelen titulars, dates, enllaços, imatges seleccionades i visualitzacions ajustades pel factor configurat. Es respecten les opcions de foto, números i recompte visible. Les notícies mostren el dia de publicació i els esdeveniments el dia de celebració. No es carreguen resums. Les fotografies continuen referenciant les URL públiques del servidor WordPress; el plugin no les puja a Mailchimp.
+
+L’HTML no s’actualitza després de copiar-lo ni d’enviar la newsletter. Per renovar les dades cal generar-lo de nou. Si canvies qualsevol opció al formulari, el panell invalida l’HTML anterior per evitar copiar una versió desfasada.
+
+### Adaptació al correu
+
+Es fan servir taules i estils en línia, en un bloc de fins a 600 px. No hi ha scripts, CSS Grid, Flexbox, classes de WordPress ni dependència del plugin en el correu enviat. Els titulars i les fotos contenen enllaços absoluts a la web. Les fonts es tradueixen a Arial/Helvetica o Georgia; no es carreguen fonts web. L’efecte hover i alguns acabats com cantonades poden variar entre lectors.
+
+La previsualització del navegador no substitueix una **tramesa de prova a Mailchimp** i la revisió en els lectors de correu habituals. No s’ha enviat cap campanya ni s’ha accedit a un compte Mailchimp en aquestes proves. El plugin no necessita credencials de Mailchimp ni cap connexió a la seva API per generar el codi.
+
+### Validació
+
+149 comprovacions WordPress multisite i 67 d’interacció del panell. S’han comprovat els cinc dissenys, la instantània de dades, els factors, les dates d’activitat, l’absència de dades fictícies, les imatges amb URL absoluta, els permisos i el nonce, la còpia, la descàrrega i la invalidació d’exportacions antigues.
+
+`tests/email-browser.mjs` revisa en Chromium l’HTML generat per WordPress dins del diàleg del panell: amplada de 600 px, dues columnes i contingut real de prova. La petició del panell es simula amb aquesta resposta de prova; no es connecta a cap WordPress de producció ni a Mailchimp.

@@ -18,6 +18,100 @@
   const frame = document.getElementById('pp-preview-frame');
   const status = document.getElementById('pp-preview-status');
   const config = window.PetitPopularBuilder;
+  let emailRevision = 0;
+  let emailSnapshot = null;
+  const emailStatus = document.getElementById('pp-email-status');
+  const emailCode = document.getElementById('pp-email-code');
+  const emailDialog = document.getElementById('pp-email-dialog');
+  const emailFrame = document.getElementById('pp-email-frame');
+  const emailButtons = ['pp-email-copy', 'pp-email-copy-preview', 'pp-email-download'].map(id => document.getElementById(id));
+  function closeEmail() {
+    if (emailDialog.open && typeof emailDialog.close === 'function') emailDialog.close();
+    else emailDialog.removeAttribute('open');
+  }
+  function showEmail() {
+    if (!emailSnapshot) return;
+    if (typeof emailDialog.showModal === 'function') { if (!emailDialog.open) emailDialog.showModal(); }
+    else emailDialog.setAttribute('open', '');
+  }
+  function clearEmail() {
+    const previous = Boolean(emailSnapshot);
+    emailRevision++;
+    emailSnapshot = null;
+    emailCode.value = '';
+    document.getElementById('pp-email-result').hidden = true;
+    emailButtons.forEach(button => { button.disabled = true; });
+    emailFrame.removeAttribute('srcdoc');
+    emailStatus.textContent = previous ? 'Les opcions han canviat. Torna a generar l’HTML abans de copiar-lo.' : '';
+    document.getElementById('pp-email-copy-status').textContent = '';
+    closeEmail();
+  }
+  document.getElementById('pp-email-brand-background').addEventListener('click', () => {
+    const colors = { sabadell: '#2e9c87', terrassa: '#fc634f' };
+    const selected = root.querySelector('[data-pp="brand"]').value;
+    const accent = root.querySelector('[data-pp="accent"]').value;
+    document.getElementById('pp-email-background').value = accent || colors[selected] || config?.siteAccent || '#2e9c87';
+    update();
+  });
+  emailFrame.addEventListener('load', () => {
+    if (!emailFrame.hasAttribute('srcdoc')) return;
+    const resize = () => { if (emailFrame.contentDocument?.body) emailFrame.style.height = Math.min(560, Math.max(180, emailFrame.contentDocument.body.scrollHeight + 24)) + 'px'; };
+    resize();
+    emailFrame.contentDocument?.querySelectorAll('img').forEach(image => image.addEventListener('load', resize));
+  });
+  document.getElementById('pp-email-review').addEventListener('click', showEmail);
+  document.getElementById('pp-email-close').addEventListener('click', closeEmail);
+  document.getElementById('pp-email-generate').addEventListener('click', async event => {
+    if (!config?.emailNonce) { emailStatus.textContent = 'Recarrega la pàgina per generar l’HTML.'; return; }
+    clearEmail();
+    const version = emailRevision;
+    const button = event.currentTarget;
+    button.disabled = true;
+    emailStatus.textContent = 'Generant el rànquing real per al correu…';
+    const body = new URLSearchParams({ action: 'petit_popular_email', nonce: config.emailNonce,
+      background: document.getElementById('pp-email-background').value, layout: document.getElementById('pp-email-layout').value, columns: document.getElementById('pp-email-columns').value });
+    for (const [key, value] of Object.entries(activeArgs())) body.set(`args[${key}]`, value);
+    try {
+      const response = await fetch(config.url, { method: 'POST', credentials: 'same-origin', body });
+      const result = await response.json();
+      if (version !== emailRevision) return;
+      if (!response.ok || !result.success) throw new Error(result.data?.message || 'No s’ha pogut generar el correu.');
+      emailSnapshot = result.data;
+      emailCode.value = emailSnapshot.html;
+      document.getElementById('pp-email-result').hidden = false;
+      emailButtons.forEach(control => { control.disabled = false; });
+      const note = `${emailSnapshot.count} continguts · ${emailSnapshot.layout} · dades del ${emailSnapshot.generated_at}`;
+      emailStatus.textContent = note;
+      document.getElementById('pp-email-snapshot-note').textContent = note + '. Regenera l’HTML si vols actualitzar les dades.';
+      emailFrame.srcdoc = '<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:10px;font-family:Arial,sans-serif}a{pointer-events:none}</style></head><body>' + emailSnapshot.html + '</body></html>';
+      showEmail();
+    } catch (error) {
+      if (version === emailRevision) emailStatus.textContent = error.message || 'No s’ha pogut generar el correu.';
+    } finally { button.disabled = false; }
+  });
+  async function copyEmail() {
+    if (!emailSnapshot) return;
+    const version = emailRevision;
+    try {
+      await navigator.clipboard.writeText(emailSnapshot.html);
+      if (version === emailRevision) {
+        emailStatus.textContent = 'HTML copiat. Enganxa’l en un bloc «Codi» de Mailchimp.';
+        document.getElementById('pp-email-copy-status').textContent = 'HTML copiat.';
+      }
+    } catch (_) {
+      closeEmail(); emailCode.focus(); emailCode.select();
+      emailStatus.textContent = 'Prem Ctrl+C o Cmd+C per copiar l’HTML seleccionat.';
+    }
+  }
+  document.getElementById('pp-email-copy').addEventListener('click', copyEmail);
+  document.getElementById('pp-email-copy-preview').addEventListener('click', copyEmail);
+  document.getElementById('pp-email-download').addEventListener('click', () => {
+    if (!emailSnapshot) return;
+    const url = URL.createObjectURL(new Blob(['<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>' + emailSnapshot.html + '</body></html>'], { type: 'text/html;charset=utf-8' }));
+    const link = document.createElement('a'); link.href = url; link.download = emailSnapshot.filename;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
   let categoryType = null;
   const categoryField = root.querySelector('[data-pp="category"]');
   function fillCategories(type, value = '') {
@@ -191,6 +285,10 @@
     }
   }
   function update() {
+    clearEmail();
+    const emailLayout = document.getElementById('pp-email-layout').value;
+    const effectiveEmailLayout = emailLayout === 'same' ? layout.value : emailLayout;
+    document.getElementById('pp-email-columns-wrap').hidden = !['cards', 'hero'].includes(effectiveEmailLayout);
     const customColor = document.getElementById('pp-color-mode').value === 'custom';
     root.querySelector('[data-pp="accent"]').value = customColor ? document.getElementById('pp-accent-picker').value : '';
     for (const key of ['title_color', 'date_color', 'hover_color', 'rank_color', 'rank_background', 'rank_border']) {

@@ -3,3 +3,5 @@ tests/content-fixture.html
 tests/admin-browser.png
 tests/density-*-fixture.html
 tests/density-browser.png
+tests/email-*-fixture.html
+tests/email-browser.png
